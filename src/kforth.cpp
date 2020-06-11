@@ -118,13 +118,8 @@ int main(int argc, char *argv[])
         {
 	    if (! pSS)
 	    {
-		// input_line = readline(NULL);
-		// if (strlen(input_line)) add_history(input_line);
-		cin >> input_line;
-		strncpy(s, input_line, 255);
-		// free(input_line);
-	       
-            	pSS = new istringstream(s);
+		cin.getline( input_line, 1024 );
+            	pSS = new istringstream(input_line);
 	    }
 	    SetForthInputStream (*pSS);	    
             ec = ForthCompiler (&op, &line_num);
