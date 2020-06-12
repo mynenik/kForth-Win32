@@ -956,12 +956,13 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		  ifstream f(filename);
 		  if (!f)
 		  {
-		    char temp[256];
 		    if (getenv("KFORTH_DIR")) {
-		      strcpy(temp, getenv("KFORTH_DIR"));
+		      char temp[256];
+      		      strcpy(temp, getenv("KFORTH_DIR"));
 	              strcat(temp, "\\");
 		      strcat(temp, filename);
 		      strcpy(filename, temp);
+		      f.clear();   // Clear the previous error
 		      f.open(filename);
 			if (f) 
 			  {
