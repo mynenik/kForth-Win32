@@ -42,7 +42,7 @@ SYMS		=
 LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 
 CFLAGS		=  -Jm -mn -C -WA -S -3 -a8 -c -w- -w2 -w3 -w6 -g 
-LFLAGS		=  /CO /NOI /DE /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 
+LFLAGS		=  /CO /NOI /DE /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES 
 DEFINES		= -D_CONSOLE -D_CONSOLE=1
 !ELSE
 OUTPUTDIR	= .
@@ -55,7 +55,7 @@ SYMS		=
 LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 
 CFLAGS		=  -Jm -mn -o+time -WA -3 -a8 -c -w- -w2 -w3 -w6 
-LFLAGS		=  /NOI /DE /E /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC 
+LFLAGS		=  /NOI /DE /E /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES
 DEFINES		= -D_CONSOLE -D_CONSOLE=1
 !ENDIF
 
@@ -137,27 +137,27 @@ BATS		=
 !IF $(DEBUG)
 .OBJ.EXE:
 		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-.\kforth.OBJ+
-.\ForthCompiler.OBJ+
-.\ForthVM.OBJ+
-.\vmc.OBJ+
-.\vm.OBJ
-.\$$SCW$$.EXE
+kforth.OBJ+
+ForthCompiler.OBJ+
+ForthVM.OBJ+
+vmc.OBJ+
+vm.OBJ
+$$SCW$$.EXE
 NUL
-.\ advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
+advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
 !ELSE
 .OBJ.EXE:
 		$(LNK) $(LFLAGS) @$(PROJ).LNK<<
-.\kforth.OBJ+
-.\ForthCompiler.OBJ+
-.\ForthVM.OBJ+
-.\vmc.OBJ+
-.\vm.OBJ
-.\$$SCW$$.EXE
+kforth.OBJ+
+ForthCompiler.OBJ+
+ForthVM.OBJ+
+vmc.OBJ+
+vm.OBJ
+$$SCW$$.EXE
 NUL
-.\ advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
+advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
 !ENDIF
@@ -198,26 +198,26 @@ $(TARGETDIR)\$(PROJ).$(PROJTYPE): $(OBJS) $(INCLUDEDOBJS) $(RCFILES) $(RESFILES)
 			-del $(TARGETDIR)\$(PROJ).$(PROJTYPE)
 !IF $(DEBUG)
 		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-.\kforth.OBJ+
-.\ForthCompiler.OBJ+
-.\ForthVM.OBJ+
-.\vmc.OBJ+
-.\vm.OBJ
-.\$$SCW$$.EXE
+kforth.OBJ+
+ForthCompiler.OBJ+
+ForthVM.OBJ+
+vmc.OBJ+
+vm.OBJ
+$$SCW$$.EXE
 NUL
-.\ advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
+advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
 !ELSE
 		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-.\kforth.OBJ+
-.\ForthCompiler.OBJ+
-.\ForthVM.OBJ+
-.\vmc.OBJ+
-.\vm.OBJ
-.\$$SCW$$.EXE
+kforth.OBJ+
+ForthCompiler.OBJ+
+ForthVM.OBJ+
+vmc.OBJ+
+vm.OBJ
+$$SCW$$.EXE
 NUL
-.\ advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
+advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
 !ENDIF
@@ -248,26 +248,26 @@ res:		cleanres $(RCFILES) all
 link:
 !IF $(DEBUG)
 		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-.\kforth.OBJ+
-.\ForthCompiler.OBJ+
-.\ForthVM.OBJ+
-.\vmc.OBJ+
-.\vm.OBJ
-.\$$SCW$$.EXE
+kforth.OBJ+
+ForthCompiler.OBJ+
+ForthVM.OBJ+
+vmc.OBJ+
+vm.OBJ
+$$SCW$$.EXE
 NUL
-.\ advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
+advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
 !ELSE
 		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-.\kforth.OBJ+
-.\ForthCompiler.OBJ+
-.\ForthVM.OBJ+
-.\vmc.OBJ+
-.\vm.OBJ
-.\$$SCW$$.EXE
+kforth.OBJ+
+ForthCompiler.OBJ+
+ForthVM.OBJ+
+vmc.OBJ+
+vm.OBJ
+$$SCW$$.EXE
 NUL
-.\ advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
+advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
 !ENDIF

@@ -2,7 +2,7 @@
 //
 // The kForth environment
 //
-// Copyright (c) 1998--2003 Krishna Myneni and David P. Wallace, 
+// Copyright (c) 1998--2020 Krishna Myneni and David P. Wallace, 
 //   Creative Consulting for Research and Education
 // 
 // This software is provided under the terms of the GNU General Public License.
@@ -12,8 +12,8 @@
 //
 //      kforth [name[.4th]] [-D] [-e string]
 //
-char* version = "1.0.14-2";
-char* Rls_Date = "2003-04-18";
+char* version = "1.0.15";
+char* Rls_Date = "2020-06-13";
 
 #include <iostream>
 #include <fstream>
