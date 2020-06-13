@@ -257,14 +257,14 @@ int C_key ()
 
   HANDLE hStdIn;
   INPUT_RECORD inBuf;
-  unsigned int ch, n=0;
+  unsigned long ch, n=0;
 
   hStdIn = GetStdHandle(STD_INPUT_HANDLE);
    while (n < 1) {
      if (ReadConsoleInput( hStdIn, &inBuf, 1, &n )) {
        if ((inBuf.EventType == KEY_EVENT) && 
            (inBuf.Event.KeyEvent.bKeyDown))
-          ch = (unsigned int) inBuf.Event.KeyEvent.uChar.AsciiChar;
+          ch = (unsigned long) inBuf.Event.KeyEvent.uChar.AsciiChar;
         else
           n = 0;
      }
@@ -282,7 +282,7 @@ int C_keyquery ()
 
   HANDLE hStdIn;
   INPUT_RECORD inBuf;
-  unsigned int n, key_available;
+  unsigned long n, key_available;
 
   hStdIn = GetStdHandle(STD_INPUT_HANDLE);
   PeekConsoleInput( hStdIn, &inBuf, 1, &n );

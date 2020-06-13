@@ -2,80 +2,20 @@
 //
 // The FORTH Virtual Machine (FVM) to execute Forth byte code.
 //
-// Copyright (c) 1996--2003 Krishna Myneni, Creative Consulting for
-//   Research & Education
+// Copyright (c) 1996--2020 Krishna Myneni
 //
-// This software is provided under the General Public License.
+// This software is provided under the GNU Affero General Public
+// License (AGPL) v 3.0 or later.
 //
-// Created: 2-24-96
-// Revisions: 
-//       10-14-1998
-//       4-28-1999  increased stack size to 32768 and ret stack to 4096  KM
-//       5-29-1999  moved ABORT to vm.s; added abort/quit error code;
-//       6-06-1999  created C++ functions which can be called from vm  KM
-//       9-06-1999  implemented CPP_word  KM
-//       9-07-1999  initialize State in OpenForth  KM
-//       10-2-1999  initialize precedence byte for non-deferred words  KM
-//       10-4-1999  added CPP_create, CPP_variable, CPP_fvariable  KM
-//       10-6-1999  added CPP_constant, CPP_fconstant  KM
-//       10-10-1999 initialize precedence for immediate words;
-//                    added CPP_char, CPP_brackettick, CPP_forget, CPP_cold  KM
-//       10-20-1999 moved global input and output stream pointers to
-//                    ForthCompiler.cpp; added CPP_tofile and CPP_console  KM
-//       12-14-1999 modified CPP_tofile to use default file when not specified  KM
-//       1-13-2000  added CPP_queryallot  KM
-//       1-23-2000  added CPP_dotr, CPP_udotr, CPP_bracketchar, and changed 
-//                    behavior of CPP_char for ANSI compatible behavior  KM
-//       1-24-2000  added CPP_literal, CPP_quote, CPP_dotquote  KM
-//       3-5-2000   added CPP_lparen, CPP_do, CPP_leave, CPP_begin,
-//                    CPP_while, CPP_repeat, CPP_until, CPP_again,
-//                    CPP_if, CPP_else, CPP_then, CPP_recurse  KM
-//       3-7-2000   added ClearControlStacks; perform after VM error  KM
-//       5-17-2000  added CPP_does  KM
-//       6-12-2000  added CPP_case, CPP_endcase, CPP_of, CPP_endof  KM
-//       6-15-2000  added CPP_abortquote  KM
-//       9-05-2000  added CPP_ddot KM
-//       4-01-2001  cast pointers for delete [] in RemoveLastWord  KM
-//       4-22-2001  modified CPP_lparen to handle multiline comments  KM
-//       5-13-2001  added CPP_dotparen KM
-//       5-20-2001  added CPP_bracketsharp, CPP_sharp, CPP_sharps, CPP_hold,
-//                    CPP_sign, CPP_sharpbracket, and CPP_uddot  KM
-//       5-29-2001  wrote CPP_querydo  KM
-//       9-02-2001  fixed CPP_find to return the code pointer  KM
-//       9-03-2001  added CPP_immediate and CPP_nondeferred  KM
-//       9-21-2001  modified CPP_word to skip initial space  KM
-//       9-26-2001  fixed CPP_dotr and CPP_udotr to not print trailing space,
-//                    using new fundamental word CPP_udot0  KM
-//      12-10-2001  added CPP_evaluate, [ and ]  km
-//      07-30-2002  fixed CPP_evaluate problems; added CPP_backslash;
-//                    incr. line counters in CPP_lparen and CPP_dotparen  km
-//      09-09-2002  fixed CPP_evaluate for VM reentrancy problem  km
-//      09-26-2002  revised include statements and added "using"
-//                    declarations to resolve C++ std namespace defs;
-//                    fixed g++ 3.2 complaints about iterator usage; 
-//                    use C linkage for CPP_x functions; replace istrstream
-//                    class with istringstream class; modified CPP_dots to
-//                    check for stack underflow; also check for stack underflow
-//                    on return from VM   km
-//      09-29-2002  fixed CPP_word to remove delimiter from input stream  km
-//      04-11-2003  fixed problems with CPP_word and added CPP_source and
-//                    CPP_refill  km
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
-using std::istringstream;
-using std::cout;
-using std::endl;
-using std::istream;
-using std::ostream;
-using std::ifstream;
-using std::ofstream;
 #include "fbc.h"
 #include <vector>
-using std::vector;
+using namespace std;
 #include "ForthCompiler.h"
 #include "ForthVM.h"
 
@@ -174,10 +114,10 @@ char* V_ErrorMessages[] =
 	"",
 	"Not data type ADDR",
 	"Not data type IVAL",
-	"Invalid data type",	
+	"Invalid data type",
 	"Divide by zero",
 	"Return stack corrupt",
-	"Invalid opcode", 
+	"Invalid opcode",
         "Stack underflow",
 	"",
 	"Allot failed --- cannot reassign pfa",
@@ -214,12 +154,12 @@ int OpenForth ()
 	byte* bp = (byte*) d.Pfa;
 	bp[0] = d.WordCode;
 	bp[1] = OP_RET;
-	
+
         Dictionary.push_back(d);
     }
 
     // Set up precedence for immediate and non-deferred words
-	
+
     vector<DictionaryEntry>::iterator wI;
 
     for (wI = Dictionary.begin(); wI < Dictionary.end(); wI++)
@@ -249,7 +189,7 @@ int OpenForth ()
     BottomOfReturnStack = ForthReturnStack + RETURN_STACK_SIZE - 1;
     BottomOfTypeStack = ForthTypeStack + STACK_SIZE - 1;
     BottomOfReturnTypeStack = ForthReturnTypeStack + RETURN_STACK_SIZE - 1;
-    
+
     GlobalSp = BottomOfStack;
     GlobalTp = BottomOfTypeStack;
     GlobalRp = BottomOfReturnStack;
@@ -294,7 +234,7 @@ void RemoveLastWord ()
 	vector<DictionaryEntry>::iterator i = Dictionary.end() - 1;
 	delete [] (byte*) i->Pfa;	// free memory
 	if (i->Pfa != i->Cfa) delete [] (byte*) i->Cfa;
-	Dictionary.pop_back(); 
+	Dictionary.pop_back();
 }
 //---------------------------------------------------------------
 
@@ -305,7 +245,7 @@ vector<DictionaryEntry>::iterator LocateWord (char* name)
 //   or NULL if not found.
 
 	vector<DictionaryEntry>::iterator i;
-    
+
 	for (i = Dictionary.end()-1; i >= Dictionary.begin(); i--)
 	{
         	if (strcmp(name, i->WordName) == 0) break;
@@ -322,7 +262,7 @@ void ClearControlStacks ()
 {
   // Clear the flow control stacks
 
-  if (debug) cout << "Clearing all flow control stacks" << endl; 
+  if (debug) cout << "Clearing all flow control stacks" << endl;
   ifstack.erase(ifstack.begin(), ifstack.end());
   beginstack.erase(beginstack.begin(),beginstack.end());
   whilestack.erase(whilestack.begin(),whilestack.end());
@@ -336,7 +276,7 @@ void ClearControlStacks ()
 
 void OpsCopyInt (int offset, int i)
 {
-  // Copy integer into the current opcode vector at the specified offset 
+  // Copy integer into the current opcode vector at the specified offset
 
   vector<byte>::iterator ib = pCurrentOps->begin() + offset;
   byte* ip = (byte*) &i;
@@ -393,7 +333,7 @@ if (debug)  cout << ">ForthVM Sp: " << GlobalSp << " Rp: " << GlobalRp << endl;
       if (debug) cout << "vm Error: " << ecode << "  Offending OpCode: " << ((int) *(GlobalIp-1)) << endl;
       ClearControlStacks();
       GlobalRp = BottomOfReturnStack;        // reset the return stack ptrs
-      GlobalRtp = BottomOfReturnTypeStack;  
+      GlobalRtp = BottomOfReturnTypeStack;
     }
   else if (GlobalSp > BottomOfStack)
   {
@@ -417,7 +357,7 @@ if (debug)  cout << ">ForthVM Sp: " << GlobalSp << " Rp: " << GlobalRp << endl;
 
   *pStackPtr = GlobalSp + 1;
   *pTypePtr = GlobalTp + 1;
-if (debug)  cout << "<ForthVM Sp: " << GlobalSp << " Rp: " << GlobalRp << 
+if (debug)  cout << "<ForthVM Sp: " << GlobalSp << " Rp: " << GlobalRp <<
 	      "  vmEntryRp: " << vmEntryRp << endl;
   return ecode;
 }
@@ -469,10 +409,10 @@ int CPP_dotparen()
 
   while (TRUE)
     {
-      while ((pTIB < (TIB + 255)) && (! (*pTIB == ')')) && *pTIB) 
+      while ((pTIB < (TIB + 255)) && (! (*pTIB == ')')) && *pTIB)
 	{
 	  *pOutStream << *pTIB;
-	  ++pTIB; 
+	  ++pTIB;
 	}
 
       if (*pTIB == ')')
@@ -589,10 +529,10 @@ int CPP_sharpbracket()
 
 int CPP_dot ()
 {
-  // stack: ( n -- | print n in current base ) 
-  
+  // stack: ( n -- | print n in current base )
+
   ++GlobalSp; ++GlobalTp;
-  if (GlobalSp > BottomOfStack) 
+  if (GlobalSp > BottomOfStack)
     return E_V_STK_UNDERFLOW;
   else
     {
@@ -615,7 +555,7 @@ int CPP_dotr ()
 
   ++GlobalSp; ++GlobalTp;
   if (GlobalSp > BottomOfStack) return E_V_STK_UNDERFLOW;
-  
+
   int i, n, ndig, nfield, nchar;
   unsigned int u, utemp, uscale;
 
@@ -652,7 +592,7 @@ int CPP_udotr ()
 
   ++GlobalSp; ++GlobalTp;
   if (GlobalSp > BottomOfStack) return E_V_STK_UNDERFLOW;
-  
+
   int i, ndig, nfield, nchar;
   unsigned int u, utemp, uscale;
 
@@ -685,7 +625,7 @@ int CPP_udot0 ()
 
   ++GlobalSp; ++GlobalTp;
   if (GlobalSp > BottomOfStack) return E_V_STK_UNDERFLOW;
-  
+
   int i, ndig, nchar;
   unsigned int u, utemp, uscale;
 
@@ -696,7 +636,7 @@ int CPP_udot0 ()
 
   while (utemp /= Base) {++ndig; uscale *= Base;}
 
-  for (i = 0; i < ndig; i++) 
+  for (i = 0; i < ndig; i++)
     {
       utemp = u/uscale;
       nchar = (utemp < 10) ? (utemp + 48) : (utemp + 55);
@@ -729,7 +669,7 @@ int CPP_uddot ()
   // stack: ( ud -- | print unsigned double in current base )
 
   if ((GlobalSp + 2) > BottomOfStack) return E_V_STK_UNDERFLOW;
-  
+
   unsigned int u1;
 
   u1 = *(GlobalSp + 1);
@@ -747,7 +687,7 @@ int CPP_uddot ()
       *pOutStream << ' ';
       pOutStream->flush();
     }
-  
+
   return 0;
 }
 //---------------------------------------------------------------
@@ -756,7 +696,7 @@ int CPP_ddot ()
 {
   // stack: ( d -- | print signed double length number )
 
-  if ((GlobalSp + 2) > BottomOfStack) 
+  if ((GlobalSp + 2) > BottomOfStack)
     return E_V_STK_UNDERFLOW;
   else
     {
@@ -794,7 +734,7 @@ int CPP_dots ()
 {
   if (GlobalSp > BottomOfStack) return E_V_STK_UNDERFLOW;
 
-  L_depth();  
+  L_depth();
   ++GlobalSp; ++GlobalTp;
   int depth = *GlobalSp;
   ++GlobalSp; ++GlobalTp;
@@ -806,7 +746,7 @@ int CPP_dots ()
       *pOutStream << "\nStack ptr = " << ((int)GlobalSp);
       *pOutStream << "\nDepth = " << depth;
     }
- 
+
   if (depth > 0)
     {
       int i;
@@ -848,7 +788,7 @@ int CPP_find ()
   strncpy (name, (char*) s+1, len);
   name[len] = 0;
   strupr(name);
-  vector<DictionaryEntry>::iterator i = LocateWord (name);  
+  vector<DictionaryEntry>::iterator i = LocateWord (name);
   if (i != (vector<DictionaryEntry>::iterator) NULL)
     {
       *GlobalSp-- = (int) i->Cfa;
@@ -892,7 +832,7 @@ int CPP_cr ()
 int CPP_spaces ()
 {
   ++GlobalSp; ++GlobalTp;
-  if (GlobalSp > BottomOfStack) 
+  if (GlobalSp > BottomOfStack)
     return E_V_STK_UNDERFLOW;
   else
     {
@@ -908,12 +848,12 @@ int CPP_spaces ()
 int CPP_type ()
 {
   ++GlobalSp; ++GlobalTp;
-  if (GlobalSp > BottomOfStack) 
+  if (GlobalSp > BottomOfStack)
     return E_V_STK_UNDERFLOW;
   else
     {
       int n = *GlobalSp++; ++GlobalTp;
-      if (GlobalSp > BottomOfStack) 
+      if (GlobalSp > BottomOfStack)
 	return E_V_STK_UNDERFLOW;
       if (*GlobalTp != OP_ADDR)
 	return E_V_NOTADDR;
@@ -947,7 +887,7 @@ int CPP_words ()
 int CPP_allot ()
 {
   ++GlobalSp; ++GlobalTp;
-  if (GlobalSp > BottomOfStack) 
+  if (GlobalSp > BottomOfStack)
     return E_V_STK_UNDERFLOW;
   if (*GlobalTp != OP_IVAL)
     return E_V_BADTYPE;  // need an int
@@ -957,11 +897,11 @@ int CPP_allot ()
   if (n > 0)
     {
       if (id->Pfa == NULL)
-	{ 
+	{
 	  id->Pfa = new byte[n];
-	  if (id->Pfa) memset (id->Pfa, 0, n); 
+	  if (id->Pfa) memset (id->Pfa, 0, n);
 	}
-      else 
+      else
 	return E_V_REALLOT;
     }
   else
@@ -995,7 +935,7 @@ int CPP_word ()
 
   char delim = *(++GlobalSp); ++GlobalTp;
   char *dp = WordBuf + 1;
-  
+
   if (*pTIB == ' ') ++pTIB;
 
   while (*pTIB)
@@ -1061,7 +1001,7 @@ int CPP_variable ()
 {
   // stack: ( -- | create dictionary entry and allot space )
 
-  if (CPP_create()) return E_V_CREATE;  
+  if (CPP_create()) return E_V_CREATE;
   *GlobalSp-- = sizeof(int);
   *GlobalTp-- = OP_IVAL;
   int e = CPP_allot();
@@ -1080,7 +1020,7 @@ int CPP_fvariable ()
 {
   // stack: ( -- | create dictionary entry and allot space )
 
-  if (CPP_create()) return E_V_CREATE;  
+  if (CPP_create()) return E_V_CREATE;
   *GlobalSp-- = sizeof(double);
   *GlobalTp-- = OP_IVAL;
   int e = CPP_allot();
@@ -1091,7 +1031,7 @@ int CPP_fvariable ()
   bp[0] = OP_ADDR;
   *((int*) &bp[1]) = (int) id->Pfa;
   bp[5] = OP_RET;
-  return 0;  
+  return 0;
 }
 //------------------------------------------------------------------
 
@@ -1161,7 +1101,7 @@ int CPP_bracketchar ()
 int CPP_brackettick ()
 {
   L_tick ();
-  return CPP_literal();  
+  return CPP_literal();
 }
 //-------------------------------------------------------------------
 
@@ -1176,7 +1116,7 @@ int CPP_forget ()
   vector<DictionaryEntry>::iterator id = LocateWord (token);
   if (id != (vector<DictionaryEntry>::iterator) NULL)
     {
-      while (Dictionary.end() > id) 
+      while (Dictionary.end() > id)
 	RemoveLastWord();
     }
   else
@@ -1225,10 +1165,10 @@ int CPP_tofile ()
   if (! pFile->fail())
     {
       if (FileOutput)
-	{ 
+	{
 	  (*((ofstream*) pOutStream)).close();  // close current file output stream
 	  delete pOutStream;
-	} 
+	}
       pOutStream = pFile;
       FileOutput = TRUE;
     }
@@ -1236,7 +1176,7 @@ int CPP_tofile ()
     {
       *pOutStream << "Failed to open output file stream.\n";
     }
-  return 0;  
+  return 0;
 }
 //--------------------------------------------------------------------
 
@@ -1246,7 +1186,7 @@ int CPP_console ()
     {
       (*((ofstream*) pOutStream)).close();  // close the current file output stream
       delete pOutStream;
-    }     
+    }
   pOutStream = &cout;  // make console the new output stream
   FileOutput = FALSE;
 
@@ -1260,7 +1200,7 @@ int CPP_literal ()
 
   pCurrentOps->push_back(*(++GlobalTp));
   byte* bp = (byte*)(++GlobalSp);
-  for (int i = 0; i < sizeof(int); i++) pCurrentOps->push_back(*bp++);  
+  for (int i = 0; i < sizeof(int); i++) pCurrentOps->push_back(*bp++);
   return 0;
 }
 //-------------------------------------------------------------------
@@ -1340,7 +1280,7 @@ int CPP_do ()
 int CPP_querydo ()
 {
   // stack: ( -- | generate opcodes for beginning of conditional loop )
-  
+
   pCurrentOps->push_back(OP_2DUP);
   pCurrentOps->push_back(OP_EQ);
   CPP_if();
@@ -1377,9 +1317,9 @@ int CPP_abortquote ()
   StringTable.push_back(str);
 
   pCurrentOps->push_back(OP_JZ);
-  OpsPushInt(25);   // relative jump count                       
+  OpsPushInt(25);   // relative jump count
 
-// the relative jump count (above) must be modified if the 
+// the relative jump count (above) must be modified if the
 // instructions below are updated!
 
   pCurrentOps->push_back(OP_ADDR);
@@ -1406,7 +1346,7 @@ int CPP_begin()
 
 int CPP_while()
 {
-  // stack: ( -- | build the begin ... while ... repeat structure )	      
+  // stack: ( -- | build the begin ... while ... repeat structure )
 
   if (beginstack.empty()) return E_V_NO_BEGIN;
   pCurrentOps->push_back(OP_JZ);
@@ -1511,7 +1451,7 @@ int CPP_then()
 {
   // stack: ( -- | complete the if-then or if-else-then block )
 
-  if (ifstack.empty()) 
+  if (ifstack.empty())
     return E_V_THEN_NO_IF;  // THEN without matching IF or IF-ELSE
 
   int i = ifstack[ifstack.size()-1];
@@ -1643,7 +1583,7 @@ int CPP_does()
   vector<DictionaryEntry>::iterator id = Dictionary.end() - 1;
   *((int*)(p+1)) = (int) id->Pfa;
 
-  // Insert current instruction ptr 
+  // Insert current instruction ptr
 
   p[5] = OP_ADDR;
   *((int*)(p+6)) = (int)(GlobalIp + 1);
@@ -1694,7 +1634,7 @@ int CPP_evaluate ()
     {
       memcpy (s, cp, nc);
       s[nc] = 0;
-      if (*s) 
+      if (*s)
 	{
 	  istringstream* pSS = NULL;
 	  istream* pOldStream = pInStream;  // save old input stream
@@ -1720,7 +1660,7 @@ int CPP_evaluate ()
 	}
     }
   return 0;
-  
+
 }
 //-------------------------------------------------------------------
 

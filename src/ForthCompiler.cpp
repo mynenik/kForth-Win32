@@ -3,103 +3,21 @@
 // FORTH compiler to generate FORTH Byte Code (FBC) from expressions
 //   or programs
 //
-// Copyright (c) 1998--2003 Krishna Myneni and David P. Wallace, 
-//   Creative Consulting for Research and Education
+// Copyright (c) 1998--2020 Krishna Myneni and David P. Wallace,
 //
-// This software is provided under the terms of the General Public License.
+// This software is provided under the terms of the GNU Affero
+// General Public License (AGPL) v 3.0 or later.
 //
-// Revisions:
-// 	9-12-1998
-//	9-15-1998 added SP@, RP@, +!
-//      9-16-1998 added -ROT, PICK, ROLL, A@ 
-//	9-18-1998 error checking for incomplete structures at end of definition
-//	10-6-1998 added ?DUP
-//	10-14-1998 fixed COUNT
-//	10-19-1998 added 0<, 0=, 0>, TRUE, FALSE, INVERT
-//      02-09-1999 added EXECUTE, ' (tick)
-//      03-01-1999 added OPEN, LSEEK, CLOSE, READ, WRITE
-//      03-02-1999 added IOCTL
-//      03-03-1999 added USLEEP
-//      03-07-1999 added FILL, CMOVE
-//      03-27-1999 added +LOOP, UNLOOP
-//      03-31-1999 added CMOVE>, KEY
-//      05-06-1999 added FLOOR, FROUND
-//      05-24-1999 added FATAN2, LSHIFT, RSHIFT
-//      05-27-1999 added ACCEPT
-//      05-29-1999 added QUIT, BASE, BINARY, DECIMAL, HEX, U<, U.
-//      06-02-1999 added */, */MOD, NUMBER?
-//      06-05-1999 added CHAR (ASCII)
-//      06-09-1999 function IsInt now calls Forth's NUMBER? 
-//      06-16-1999 fixed to allow multiple LEAVEs within single DO-LOOP
-//      07-18-1999 added FIND
-//      08-24-1999 compiler reports redefinition of words
-//      09-06-1999 added use of global ptr pTIB to permit implemetation of TICK, WORD, etc.
-//      09-12-1999 added SYSTEM
-//      10-2-1999  used precedence byte to determine execution of non-deferred words
-//      10-4-1999 added CREATE, VARIABLE, FVARIABLE as intrinsic words
-//      10-6-1999 added CONSTANT, FCONSTANT as intrinsic words
-//      10-7-1999 added CHDIR
-//      10-8-1999 added ERASE, [']
-//      10-9-1999 added TIME&DATE, MS, ?, 2@, 2!, BL
-//      10-20-1999 moved global input and output stream pointers into
-//                   this module from ForthVM.cpp; added >FILE, CONSOLE
-//      10-28-1999 added KEY?
-//      11-16-1999 added RECURSE
-//      12-14-1999 fixed ExtractName for case of null string
-//      12-24-1999 added U>, F0=, F0<, S>D, D>F, F>D
-//      12-25-1999 added CELLS, CELL+, CHAR+, DFLOATS, DFLOAT+, SFLOATS, SFLOAT+
-//      12-27-1999 added BYE
-//      1-13-2000  added ?ALLOT
-//      1-23-2000  added 0<>, .R, U.R, [CHAR]; removed ASCII
-//      1-24-2000  added LITERAL, made '"' and '."' immediate words
-//      2-14-2000  added M*, UM*, FM/MOD
-//      2-26-2000  added SM/REM, UM/MOD
-//      3-1-2000   display VM errors
-//      3-5-2000   changed DO, LEAVE, BEGIN, WHILE, REPEAT, UNTIL, AGAIN,
-//                   IF, ELSE, THEN, RECURSE, and '(' from compiler directives
-//                   to actual words.
-//      3-7-2000   ensure control stacks are cleared after VM error.
-//      5-17-2000  added DOES>
-//      6-11-2000  added CASE, ENDCASE, OF, ENDOF
-//      6-15-2000  added ?DO, ABORT"
-//      8-08-2000  added default directory search for include files  DPW
-//      9-05-2000  added M/, M+, D.
-//      11-29-2000 added DABS, DNEGATE, M*/
-//      04-22-2001 added D+, D-
-//      04-24-2001 added 2>R, 2R>
-//      05-13-2001 added .(, D<, D=, D0=
-//      05-20-2001 added <#, #, #S, #>, SIGN, HOLD
-//      05-30-2001 modified loop code to handle ?DO
-//      09-03-2001 added >BODY, IMMEDIATE, NONDEFERRED, POSTPONE; fixed
-//                   immediate execution of defined words.
-//      12-08-2001 added EVALUATE
-//      02-10-2002 made .( a non-deferred word
-//      08-01-2002 added \ as a word; added STATE; fixed behavior of 
-//                   POSTPONE for non-immediate words; added MS@;
-//                   code cleanup in ForthCompiler()
-//      09-25-2002 updated include statements and added "using" directives
-//                   to resolve std namespace definitions for gcc 3.2
-//      09-29-2002 added IMMEDIATE as a regular word; cleaned up logic
-//                   for INCLUDE
-//      04-11-2003 changed F>S to FROUND>S
-//      04-15-2003 added FTRUNC and FTRUNC>S
 
 #include <iostream>
 #include <fstream>
-using std::cout;
-using std::endl;
-using std::istream;
-using std::ostream;
-using std::ifstream;
-using std::ofstream;
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include "fbc.h"
 #include <vector>
 #include <stack>
-using std::vector;
-using std::stack;
+using namespace std;
 #include "ForthCompiler.h"
 
 extern int debug;
@@ -138,7 +56,7 @@ extern "C" byte* GlobalTp;
 extern "C" int* JumpTable;
 extern "C" int Base;
 extern "C" int State;  // TRUE = compile, FALSE = interpret
-extern "C" char* pTIB; 
+extern "C" char* pTIB;
 extern "C"  char TIB[];  // contains current line of input
 
 // void strupr (char*);
@@ -172,17 +90,17 @@ DictionaryEntry NewWord;
 
 char* WordNames[] =
     {
-        "WORD", "WORDS", "FIND", 
+        "WORD", "WORDS", "FIND",
 	"'", "[']", "[", "]",
-	"CREATE", "DOES>", ">BODY", 
-	"FORGET", "COLD", 
+	"CREATE", "DOES>", ">BODY",
+	"FORGET", "COLD",
 	"ALLOT", "?ALLOT",
 	"LITERAL", "EVALUATE", "IMMEDIATE",
 	"CONSTANT", "FCONSTANT",
 	"VARIABLE", "FVARIABLE",
 	"CELLS", "CELL+", "CHAR+",
 	"DFLOATS", "DFLOAT+", "SFLOATS", "SFLOAT+",
-	"?", "@", "!", 
+	"?", "@", "!",
 	"2@", "2!", "A@",
         "C@", "C!",
         "W@", "W!",
@@ -190,21 +108,21 @@ char* WordNames[] =
         "DF@", "DF!",
         "SF@", "SF!",
 	"SP@", "RP@",
-        ">R", "R>", "R@", 
-	"2>R", "2R>", "2R@", 
+        ">R", "R>", "R@",
+	"2>R", "2R>", "2R@",
         "?DUP",
         "DUP", "DROP", "SWAP",
-        "OVER", "ROT", "-ROT", 
+        "OVER", "ROT", "-ROT",
 	"NIP", "TUCK", "PICK", "ROLL",
         "2DUP", "2DROP", "2SWAP",
         "2OVER", "2ROT",
         "DEPTH",
 	"BASE", "BINARY", "DECIMAL", "HEX",
-        "1+", "1-", "2+", "2-", 
+        "1+", "1-", "2+", "2-",
 	"2*", "2/",
-        "DO", "?DO", 
-	"LOOP", "+LOOP", 
-	"LEAVE", "UNLOOP", 
+        "DO", "?DO",
+	"LOOP", "+LOOP",
+	"LEAVE", "UNLOOP",
 	"I", "J",
 	"BEGIN", "WHILE", "REPEAT",
 	"UNTIL", "AGAIN",
@@ -214,12 +132,12 @@ char* WordNames[] =
         "EXIT", "QUIT", "ABORT",
 	"ABORT\x22", "USLEEP",
         "EXECUTE", "CALL", "SYSTEM",
-	"TIME&DATE", "MS", "MS@", 
+	"TIME&DATE", "MS", "MS@",
 	"CHDIR", ">FILE", "CONSOLE",
 	"\\", "(", ".(",
-	"\x22", "C\x22", "S\x22", 
+	"\x22", "C\x22", "S\x22",
 	"COUNT", "NUMBER?",
-	"<#", "#", "#S", 
+	"<#", "#", "#S",
 	"#>", "SIGN", "HOLD",
         ".", ".R",
 	"D.",
@@ -237,18 +155,18 @@ char* WordNames[] =
         "AND", "OR", "XOR", "NOT", "INVERT",
 	"LSHIFT", "RSHIFT",
         "+", "-", "*", "/",
-	"MOD", "/MOD", 
+	"MOD", "/MOD",
 	"*/", "*/MOD", "+!",
 	"D+", "D-",
 	"M+", "M*", "M/",
 	"M*/",
-	"UM*", "UM/MOD", 
+	"UM*", "UM/MOD",
 	"FM/MOD", "SM/REM",
         "ABS", "NEGATE", "MIN", "MAX",
 	"DABS", "DNEGATE",
-	"OPEN", "LSEEK", "CLOSE", 
+	"OPEN", "LSEEK", "CLOSE",
 	"READ", "WRITE", "IOCTL",
-	"FILL", "ERASE", 
+	"FILL", "ERASE",
 	"CMOVE", "CMOVE>",
         "FDUP", "FDROP", "FSWAP",
         "FOVER", "FROT",
@@ -269,17 +187,17 @@ char* WordNames[] =
 
 byte WordCodes[] =
     {
-        OP_WORD, OP_WORDS, OP_FIND, 
+        OP_WORD, OP_WORDS, OP_FIND,
 	OP_TICK, OP_BRACKETTICK, OP_LBRACKET, OP_RBRACKET,
-	OP_CREATE, OP_DOES, OP_TOBODY, 
-	OP_FORGET, OP_COLD, 
+	OP_CREATE, OP_DOES, OP_TOBODY,
+	OP_FORGET, OP_COLD,
 	OP_ALLOT, OP_QUERYALLOT,
 	OP_LITERAL, OP_EVALUATE, OP_IMMEDIATE,
 	OP_CONSTANT, OP_FCONSTANT,
 	OP_VARIABLE, OP_FVARIABLE,
 	OP_CELLS, OP_CELLPLUS, OP_INC,
 	OP_DFLOATS, OP_DFLOATPLUS, OP_CELLS, OP_CELLPLUS,
-	OP_QUESTION, OP_FETCH, OP_STORE, 
+	OP_QUESTION, OP_FETCH, OP_STORE,
 	OP_DFFETCH, OP_DFSTORE, OP_AFETCH,
         OP_CFETCH, OP_CSTORE,
         OP_WFETCH, OP_WSTORE,
@@ -287,11 +205,11 @@ byte WordCodes[] =
         OP_DFFETCH, OP_DFSTORE,
         OP_SFFETCH, OP_SFSTORE,
 	OP_SPFETCH, OP_RPFETCH,
-        OP_PUSH, OP_POP, OP_RFETCH, 
+        OP_PUSH, OP_POP, OP_RFETCH,
         OP_TWOPUSH, OP_TWOPOP, OP_TWORFETCH,
         OP_QUERYDUP,
         OP_DUP, OP_DROP, OP_SWAP,
-        OP_OVER, OP_ROT, OP_MINUSROT, 
+        OP_OVER, OP_ROT, OP_MINUSROT,
 	OP_NIP, OP_TUCK, OP_PICK, OP_ROLL,
         OP_2DUP, OP_2DROP, OP_2SWAP,
         OP_2OVER, OP_2ROT,
@@ -299,8 +217,8 @@ byte WordCodes[] =
 	OP_BASE, OP_BINARY, OP_DECIMAL, OP_HEX,
         OP_INC, OP_DEC, OP_TWOPLUS, OP_TWOMINUS,
 	OP_TWOSTAR, OP_TWODIV,
-        OP_DO, OP_QUERYDO, 
-	OP_LOOP, OP_PLUSLOOP, 
+        OP_DO, OP_QUERYDO,
+	OP_LOOP, OP_PLUSLOOP,
 	OP_LEAVE, OP_UNLOOP,
 	OP_I, OP_J,
 	OP_BEGIN, OP_WHILE, OP_REPEAT,
@@ -311,12 +229,12 @@ byte WordCodes[] =
         OP_RET, OP_QUIT, OP_ABORT,
 	OP_ABORTQUOTE, OP_USLEEP,
         OP_EXECUTE, OP_CALL, OP_SYSTEM,
-	OP_TIMEANDDATE, OP_MS, OP_MSFETCH, 
+	OP_TIMEANDDATE, OP_MS, OP_MSFETCH,
 	OP_CHDIR, OP_TOFILE, OP_CONSOLE,
 	OP_BACKSLASH, OP_LPAREN, OP_DOTPAREN,
 	OP_CQUOTE, OP_CQUOTE, OP_SQUOTE,
 	OP_COUNT, OP_NUMBERQUERY,
-	OP_BRACKETSHARP, OP_SHARP, OP_SHARPS, 
+	OP_BRACKETSHARP, OP_SHARP, OP_SHARPS,
 	OP_SHARPBRACKET, OP_SIGN, OP_HOLD,
         OP_DOT, OP_DOTR,
 	OP_DDOT,
@@ -328,24 +246,24 @@ byte WordCodes[] =
         OP_SEARCH, OP_COMPARE,
         OP_EQ, OP_NE, OP_LT, OP_GT, OP_LE, OP_GE,
 	OP_ULT, OP_UGT,
-	OP_ZEROLT, OP_ZEROEQ, OP_ZERONE, OP_ZEROGT, 
+	OP_ZEROLT, OP_ZEROEQ, OP_ZERONE, OP_ZEROGT,
 	OP_DLT, OP_DEQ, OP_DZEROEQ,
 	OP_FALSE, OP_TRUE,
         OP_AND, OP_OR, OP_XOR, OP_NOT, OP_NOT,
 	OP_LSHIFT, OP_RSHIFT,
-        OP_ADD, OP_SUB, OP_MUL, OP_DIV, 
+        OP_ADD, OP_SUB, OP_MUL, OP_DIV,
 	OP_MOD, OP_SLASHMOD,
 	OP_STARSLASH, OP_STARSLASHMOD, OP_PLUSSTORE,
 	OP_DPLUS, OP_DMINUS,
 	OP_MPLUS, OP_MSTAR, OP_MSLASH,
 	OP_MSTARSLASH,
-	OP_UMSTAR, OP_UMSLASHMOD, 
+	OP_UMSTAR, OP_UMSLASHMOD,
 	OP_FMSLASHMOD, OP_SMSLASHREM,
         OP_ABS, OP_NEG, OP_MIN, OP_MAX,
 	OP_DABS, OP_DNEGATE,
-	OP_OPEN, OP_LSEEK, OP_CLOSE, 
+	OP_OPEN, OP_LSEEK, OP_CLOSE,
 	OP_READ, OP_WRITE, OP_IOCTL,
-	OP_FILL, OP_ERASE, 
+	OP_FILL, OP_ERASE,
 	OP_CMOVE, OP_CMOVEFROM,
         OP_2DUP, OP_2DROP, OP_2SWAP,
         OP_2OVER, OP_2ROT,
@@ -366,15 +284,15 @@ byte WordCodes[] =
 
 // Non-deferred words are executed immediately by
 //   the interpreter in the non-compiling state.
- 
-byte NondeferredWords[] = 
+
+byte NondeferredWords[] =
 {
   OP_BACKSLASH,
   OP_DOTPAREN,
-  OP_BINARY, 
-  OP_DECIMAL, 
-  OP_HEX, 
-  OP_WORD, 
+  OP_BINARY,
+  OP_DECIMAL,
+  OP_HEX,
+  OP_WORD,
   OP_TICK,
   OP_CREATE,
   OP_FORGET,
@@ -428,7 +346,7 @@ char* C_ErrorMessages[] =
 	"",
 	"",
 	"End of definition with no beginning",
-	"End of string",	 
+	"End of string",
         "Not allowed inside colon definition",
 	"Error opening file",
 	"Incomplete IF...THEN structure",
@@ -467,7 +385,7 @@ char* ExtractName (char* str, char* name)
     return pStr;
 }
 //---------------------------------------------------------------
-	
+
 int IsForthWord (char* name, DictionaryEntry* pE)
 {
 // Locate and Return a copy of the dictionary entry
@@ -530,7 +448,7 @@ int IsInt (char* token, int* p)
   strcpy (s+1, token);
   *GlobalSp-- = (int) s;
   *GlobalTp-- = OP_ADDR;
-  
+
   int err = C_numberquery();
   if (err)
     {
@@ -599,7 +517,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 //  other --- see ForthCompiler.h
 
   int ecode = 0, opcount = 0;
-  char s[256], WordToken[256], filename[256]; 
+  char s[256], WordToken[256], filename[256];
   char *begin_string, *end_string, *str;
   double fval;
   int i, j, ival, *sp;
@@ -653,7 +571,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		  pOpCodes->push_back(OP_RET);
 		  ival = ForthVM (pOpCodes, &sp, &tp);
 		  pOpCodes->erase(pOpCodes->begin(), pOpCodes->end());
-		  if (ival) 
+		  if (ival)
 		    {
 		      PrintVM_Error(ival);
 		      ecode = E_C_VMERROR;
@@ -680,7 +598,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 	      if (State)
 		{
 		  // Check for incomplete control structures
-		    
+
 		  if (ifstack.size())
 		    {
 		      ecode = E_C_INCOMPLETEIF;
@@ -705,7 +623,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		  // Add a new entry into the dictionary
 
 		  if (debug) OutputForthByteCode (pOpCodes);
- 		  
+
 		  NewWord.Pfa = new byte[pOpCodes->size()];
 		  NewWord.Cfa = NewWord.Pfa;
 
@@ -744,7 +662,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 	      if (IsForthWord(WordToken, &d))
 		{
 		  pOpCodes->push_back(d.WordCode);
-		  
+
 
 		  if (d.WordCode == OP_DEFINITION)
 		    {
@@ -760,7 +678,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		    {
 		      // push value into the byte code vector
 
-		      OpsPushInt(*((int*)d.Pfa));			
+		      OpsPushInt(*((int*)d.Pfa));
 		    }
 		  else if (d.WordCode == OP_FVAL)
 		    {
@@ -865,7 +783,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 			}
 		    }
 		  vector<byte> SingleOp;
-		  
+
 		  switch (execution_method)
 		    {
 		    case EXECUTE_UP_TO:
@@ -876,10 +794,10 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		      if (debug) OutputForthByteCode (pOpCodes);
 		      ival = ForthVM (pOpCodes, &sp, &tp);
 		      pOpCodes->erase(pOpCodes->begin(), pOpCodes->end());
-		      if (ival) 
-			{ 
+		      if (ival)
+			{
 			  PrintVM_Error(ival); ecode = E_C_VMERROR;
-			  goto endcompile; 
+			  goto endcompile;
 			}
 		      break;
 
@@ -891,10 +809,10 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		      pOpCodes->erase(ib1, pOpCodes->end());
 		      ival = ForthVM (&SingleOp, &sp, &tp);
 		      SingleOp.erase(SingleOp.begin(), SingleOp.end());
-		      if (ival) 
-			{ 
+		      if (ival)
+			{
 			  PrintVM_Error(ival); ecode = E_C_VMERROR;
-			  goto endcompile; 
+			  goto endcompile;
 			}
 		      pOpCodes = pCurrentOps; // may have been redirected
 		      break;
@@ -956,22 +874,23 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		  ifstream f(filename);
 		  if (!f)
 		  {
-		    if (getenv("KFORTH_DIR")) {
-		      char temp[256];
-      		      strcpy(temp, getenv("KFORTH_DIR"));
-	              strcat(temp, "\\");
-		      strcat(temp, filename);
-		      strcpy(filename, temp);
-		      f.clear();   // Clear the previous error
-		      f.open(filename);
-			if (f) 
+		      if (getenv("KFORTH_DIR"))
+		      {
+			char temp[256];
+			strcpy(temp, getenv("KFORTH_DIR"));
+			strcat(temp, "\\");
+			strcat(temp, filename);
+			strcpy(filename, temp);
+			f.clear();   // Clear the previous error
+			f.open(filename);
+			if (f)
 			  {
 			    *pOutStream << endl << filename << endl;
 			  }
-		    }
+		      }
 		  }
 
-		  if (f.fail()) 
+		  if (f.fail())
 		    {
 		      *pOutStream << endl << filename << endl;
 		      ecode = E_C_OPENFILE;
@@ -983,7 +902,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		  ecode = ForthCompiler (pOpCodes, &linecount);
 		  f.close();
 		  pInStream = pTempIn;  // restore the input stream
-		  if (ecode) 
+		  if (ecode)
 		    {
 		      *pOutStream << filename << "  " ;
 		      goto endcompile;
@@ -991,13 +910,13 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		  linecount = oldlc;
 
 		  // Execute the code immediately
-		      
+
 		  ival = ForthVM (pOpCodes, &sp, &tp);
 		  pOpCodes->erase(pOpCodes->begin(), pOpCodes->end());
-		  if (ival) 
-		    { 
-		      PrintVM_Error(ival); ecode = E_C_VMERROR; 
-		      goto endcompile; 
+		  if (ival)
+		    {
+		      PrintVM_Error(ival); ecode = E_C_VMERROR;
+		      goto endcompile;
 		    }
 		  strcpy(TIB, s);  // restore TIB with remaining input line
 		  pTIB = TIB;      // restore ptr
@@ -1010,7 +929,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		}
 	    }
 	} // end while (*pTIB ...)
-	
+
       if ((State == 0) && pOpCodes->size())
 	{
 	  // Execute the current line in interpretation state
@@ -1018,16 +937,16 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 	  if (debug) OutputForthByteCode (pOpCodes);
 	  ival = ForthVM (pOpCodes, &sp, &tp);
 	  pOpCodes->erase(pOpCodes->begin(), pOpCodes->end());
-	  if (ival) 
-	    { 
-	      PrintVM_Error(ival); ecode = E_C_VMERROR; goto endcompile; 
+	  if (ival)
+	    {
+	      PrintVM_Error(ival); ecode = E_C_VMERROR; goto endcompile;
 	    }
 	}
 
     } // end while (TRUE)
 
 endcompile:
-    
+
   if ((ecode != E_C_NOERROR) && (ecode != E_C_ENDOFSTREAM))
     {
       // A compiler error occurred; reset to interpreter mode and
@@ -1036,7 +955,7 @@ endcompile:
       State = FALSE;
       ClearControlStacks();
     }
-  if (debug) 
+  if (debug)
     {
       *pOutStream << "Error: " << ecode << " State: " << State << endl;
       *pOutStream << "<Compiler Sp: " << GlobalSp << " Rp: " << GlobalRp << endl;

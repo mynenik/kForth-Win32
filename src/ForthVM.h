@@ -1,8 +1,9 @@
 // ForthVM.h
 //
-// Copyright (c) 1996--2003 Creative Consulting for Research & Education
-// Created: 2-24-96
-// Last Revised: 04-11-2003
+// Copyright (c) 1996--2020 Krishna Myneni
+// 
+// Provided under the terms of the GNU Affero General Public License
+// (AGPL) v 3.0 or later.
 
 #ifndef __FORTHVM_H__
 #define __FORTHVM_H__

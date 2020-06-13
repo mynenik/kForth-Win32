@@ -2,11 +2,11 @@
 //
 //  Forth Byte Codes (FBC)
 //
-//  Copyright (c) 1996--2003 Krishna Myneni, Creative Consulting for
-//    Research & Education
-//  Created: 2-24-96
-//  Last Revised: 4-15-2003
-
+//  Copyright (c) 1996--2020 Krishna Myneni
+//  
+//  Provided under the terms of the GNU Affero General Public License
+//  (AGPL) v 3.0 or later.
+//
 #ifndef __FORTHBYTECODES_H__
 #define __FORTHBYTECODES_H__
 
