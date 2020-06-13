@@ -58,7 +58,6 @@ unsigned long int ForthStartTime;
 double* pf;
 double f;
 char temp_str[256];
-char key_query_char = 0;
 
 int C_ftan ()
 {
@@ -256,56 +255,41 @@ int C_key ()
 {
   /* stack: ( -- n | wait for keypress and return key code ) */
 
-  char ch;
-  int n;
-//  struct termios t1, t2;
+  HANDLE hStdIn;
+  INPUT_RECORD inBuf;
+  unsigned int ch, n=0;
 
-  if (key_query_char)
-    {
-      ch = key_query_char;
-      key_query_char = 0;
-    }
-  else
-    {
-//      tcgetattr(0, &t1);
-//      t2 = t1;
-//      t2.c_lflag &= ~ICANON;
-//      t2.c_lflag &= ~ECHO;
-//      t2.c_cc[VMIN] = 1;
-//      t2.c_cc[VTIME] = 0;
-//      tcsetattr(0, TCSANOW, &t2);
-
-      do {
-	n = read(0, &ch, 1);
-      } while (n != 1);
-
-//      tcsetattr(0, TCSANOW, &t1);
-    }
-
-  *GlobalSp-- = ch;
-  *GlobalTp-- = OP_IVAL;
+  hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+   while (n < 1) {
+     if (ReadConsoleInput( hStdIn, &inBuf, 1, &n )) {
+       if ((inBuf.EventType == KEY_EVENT) && 
+           (inBuf.Event.KeyEvent.bKeyDown))
+          ch = (unsigned int) inBuf.Event.KeyEvent.uChar.AsciiChar;
+        else
+          n = 0;
+     }
+   }
+   *GlobalSp-- = ch;
+   *GlobalTp-- = OP_IVAL;
  
-  return 0;
+   return 0;
 }
 /*----------------------------------------------------------*/
 
 int C_keyquery ()
 {
-  /* stack: ( a -- b | return true if a key is available ) */
+  /* stack: ( -- b | return true if a key is available ) */
 
-  int result;
-  char ch = 0;
-  int nread;
+  HANDLE hStdIn;
+  INPUT_RECORD inBuf;
+  unsigned int n, key_available;
 
-  if (key_query_char)
-    {
-      *GlobalSp-- = -1;
-    }
-  else
-    {
-      *GlobalSp-- = 0;
-    }
+  hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+  PeekConsoleInput( hStdIn, &inBuf, 1, &n );
+  key_available = ((inBuf.EventType == KEY_EVENT) &&
+      (inBuf.Event.KeyEvent.bKeyDown));
 
+  *GlobalSp-- = key_available ? -1 : 0;
   *GlobalTp-- = OP_IVAL;
   return 0;
 }      
@@ -317,7 +301,6 @@ int C_accept ()
 
   char ch, *cp, *cpstart, *bksp = "\010 \010";
   int n1, n2, nr;
-//  struct termios t1, t2;
 
   ++GlobalSp; ++GlobalTp;
   n1 = *GlobalSp++; ++GlobalTp;
@@ -328,28 +311,23 @@ int C_accept ()
   n2 = 0;
   while (n2 < n1)
     {
-      nr = read (0, cp, 1);
-      if (nr == 1) 
-	{
-	  if (*cp == 10) 
-	    break;
-	  else if (*cp == 8)
-	    {
-	      --cp; --n2;
-	      if ((cp < cpstart) || (n2 < 0))
-		{ 
-		  n2 = 0;
-		  cp = cpstart;
-		}
-	      else
-		write (0, bksp, 3);
-	    }
-	  else
-	    {
-	      write (0, cp, 1);
-	      ++n2; ++cp;
-	    }
+      C_key();
+      *cp = *(++GlobalSp); ++GlobalTp;
+      if (*cp == 10) 
+ 	break;
+      else if (*cp == 8) {
+        --cp; --n2;
+        if ((cp < cpstart) || (n2 < 0))  { 
+	  n2 = 0;
+	  cp = cpstart;
 	}
+	else
+	  write (0, bksp, 3);
+       }
+       else {
+	  write (0, cp, 1);
+	  ++n2; ++cp;
+        }
     }
   *GlobalSp-- = n2;
   *GlobalTp-- = OP_IVAL;
