@@ -9,7 +9,7 @@
 \
 \	matrix.4th
 \	strings.4th
-\	files.4th  (filesw.4th for Windows)
+\	files.4th
 \
 \ Revisions:
 \

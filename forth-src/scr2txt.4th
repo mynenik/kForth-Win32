@@ -12,7 +12,7 @@
 \	12-22-1999  remove trailing spaces from input lines  KM
 \
 include strings
-include filesw
+include files
 
 create ifname 80 allot
 create ofname 80 allot

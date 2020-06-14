@@ -5,7 +5,7 @@
 \ Requires the following 4th files:
 \
 \	strings.4th
-\	files.4th (linux) or filesw.4th (for windows)
+\	files.4th
 \
 variable f1
 create line_buf 256 allot

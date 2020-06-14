@@ -2,7 +2,7 @@
 \
 \ Some ANS Forth words which are not a part of the intrinsic
 \ dictionary of kForth are implemented here in source code.
-\ Use with kForth version 1.0.12 or higher.
+\ Use with kForth version 1.0.14 or higher.
 \
 \ Some other words, which are not part of the ANS specification,
 \ but which are so commonly used that they are effectively
@@ -29,6 +29,7 @@
 \			       2LITERAL  km
 \	2003-03-02  fixed F~ for case of exact equality test  km
 \	2003-03-09  added >NUMBER, DEFER, and IS  km
+\       2003-09-28  added [IF], [ELSE], [THEN]  km
 BASE @
 DECIMAL
 \ ============== From the CORE wordset
@@ -91,6 +92,36 @@ CREATE PAD 512 ALLOT
        THEN
      THEN ;
  
+
+\ ============ From the PROGRAMMING TOOLS wordset
+( see DPANS94, sec. A.15)
+
+: [ELSE]  ( -- )
+    1 BEGIN                               \ level
+      BEGIN
+        BL WORD COUNT  DUP  WHILE         \ level adr len
+        2DUP  S" [IF]"  COMPARE 0=
+        IF                                \ level adr len
+          2DROP 1+                        \ level'
+        ELSE                              \ level adr len
+          2DUP  S" [ELSE]"
+          COMPARE 0= IF                   \ level adr len
+             2DROP 1- DUP IF 1+ THEN      \ level'
+          ELSE                            \ level adr len
+            S" [THEN]"  COMPARE 0= IF     \ level
+              1-                          \ level'
+            THEN
+          THEN
+        THEN ?DUP 0=  IF EXIT THEN        \ level'
+      REPEAT  2DROP                       \ level
+    REFILL 0= UNTIL                       \ level
+    DROP
+;  IMMEDIATE
+
+: [IF]  ( flag -- )
+   0= IF POSTPONE [ELSE] THEN ;  IMMEDIATE
+
+: [THEN]  ( -- )  ;  IMMEDIATE
 
 
 \ ============= De Facto Standard Words

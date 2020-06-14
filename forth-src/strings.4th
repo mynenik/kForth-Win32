@@ -215,36 +215,32 @@ variable number_count
 
 
 : f>string ( f n -- ^str | conversion is in exponential format with n places )
-	>r fdup f0=
-	if
+	>r 
+	fdup f0= IF
 	  f>d <# r> 0 ?do # loop #> s" e0" strcat 
 	  s"  0." 2swap strcat strpck exit	  
-	then
+	THEN
 	r>
 	dup 16 swap u< if drop fdrop c" ******" exit then  \ test for invalid n
 	fnumber_digits !
 	0 fnumber_power !
-	fdup 0e f< if true else false then fnumber_sign ! 
+	fdup 0e f< fnumber_sign ! 
 	fabs
-	fdup 1e f<
-	if
-	  fdup 0e f>
-	  if
-	    begin
+	fdup 1e f< IF
+	  fdup 0e f> IF
+	    BEGIN
 	      10e f* -1 fnumber_power +!
 	      fdup 1e f>=
-	    until
-	  then
-	else
-	  fdup 
-	  10e f>=
-	  if
-	    begin
+	    UNTIL
+	  THEN
+	ELSE
+	  fdup 10e f>= IF
+	    BEGIN
 	      10e f/ 1 fnumber_power +!
 	      fdup 10e f<
-	    until
-	  then
-	then
+	    UNTIL
+	  THEN
+	THEN
 	10e fnumber_digits @ s>f f**
 	f* floor f>d d>string
 	count drop dup fnumber_buf
@@ -256,7 +252,7 @@ variable number_count
 	[char] . fnumber_buf 2+ c!
 	fnumber_buf 3 + fnumber_digits @ cmove
 	fnumber_buf fnumber_digits @ 3 +	
-	" e" count strcat
+	s" e" strcat
 	fnumber_power @ s>string count strcat
 	strpck 	;
 

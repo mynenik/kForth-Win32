@@ -9,7 +9,7 @@
 \
 \ Required files:
 \	strings.4th
-\	files(w).4th
+\	files.4th
 \
 \ Usage:
 \	dos2unix	-- user is prompted to enter input and output names
@@ -20,7 +20,7 @@
 \	12-21-2000  fixed null line problem  KM
 \
 include strings
-include filesw
+include files
 
 create ifname 256 allot
 create ofname 256 allot

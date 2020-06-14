@@ -12,7 +12,7 @@
 \	struct
 \	  cell% field x
 \	  cell% field y
-\	end-structure point%
+\	end-struct point%
 \
 \ Creating an instance of, and initializing the above structure:
 \

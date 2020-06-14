@@ -11,7 +11,7 @@
 \ Requires kForth 1.0.14 or later
 include ans-words.4th
 include strings.4th
-include filesw.4th
+include files.4th
 include macro.4th
 \ ============== end of kForth requirements ===================
 
