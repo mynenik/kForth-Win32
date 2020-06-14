@@ -263,7 +263,8 @@ int C_key ()
    while (n < 1) {
      if (ReadConsoleInput( hStdIn, &inBuf, 1, &n )) {
        if ((inBuf.EventType == KEY_EVENT) && 
-           (inBuf.Event.KeyEvent.bKeyDown))
+           (inBuf.Event.KeyEvent.bKeyDown) &&
+	   (inBuf.Event.KeyEvent.uChar.AsciiChar))
           ch = (unsigned long) inBuf.Event.KeyEvent.uChar.AsciiChar;
         else
           n = 0;
@@ -287,7 +288,8 @@ int C_keyquery ()
   hStdIn = GetStdHandle(STD_INPUT_HANDLE);
   PeekConsoleInput( hStdIn, &inBuf, 1, &n );
   key_available = ((inBuf.EventType == KEY_EVENT) &&
-      (inBuf.Event.KeyEvent.bKeyDown));
+      (inBuf.Event.KeyEvent.bKeyDown) &&
+      (inBuf.Event.KeyEvent.uChar.AsciiChar));
 
   *GlobalSp-- = key_available ? -1 : 0;
   *GlobalTp-- = OP_IVAL;
@@ -313,7 +315,7 @@ int C_accept ()
     {
       C_key();
       *cp = *(++GlobalSp); ++GlobalTp;
-      if (*cp == 10) 
+      if (*cp == 13) 
  	break;
       else if (*cp == 8) {
         --cp; --n2;
