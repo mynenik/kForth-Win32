@@ -75,11 +75,11 @@ RCDEFINES	=
 
 INCLUDES	= -ID:\dm\stlport\stlport
 
-INCLUDEDOBJS	= VM.OBJ
+INCLUDEDOBJS	= VM32.OBJ
 
-OBJS		=  ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ kforth.OBJ
+OBJS		= ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ kforth.OBJ
 
-RCFILES		=
+RCFILES		= kforth.rc
 
 RESFILES	= 
 
@@ -141,7 +141,7 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm.OBJ
+vm32.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -154,7 +154,7 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm.OBJ
+vm32.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -202,7 +202,7 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm.OBJ
+vm32.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -214,7 +214,7 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm.OBJ
+vm32.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -252,7 +252,7 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm.OBJ
+vm32.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -264,7 +264,7 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm.OBJ
+vm32.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
