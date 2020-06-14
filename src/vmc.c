@@ -342,7 +342,7 @@ int C_numberquery ()
 
   char *token, *pStr, *endp;
   int b, sign;
-  unsigned u;
+  int n;
 
   ++GlobalSp; ++GlobalTp;
   if (GlobalSp > BottomOfStack) return 7; /* stack underflow */
@@ -350,7 +350,7 @@ int C_numberquery ()
   token = *((char**)GlobalSp);
   ++token;
   pStr = token;
-  u = 0;
+  n = 0;
   sign = FALSE;
   b = FALSE;
 
@@ -366,13 +366,13 @@ int C_numberquery ()
 	}
       if (*pStr == 0)
         {
-	  u = strtoul(token, &endp, Base);
+	  n = strtol(token, &endp, Base);
 	  b = TRUE;
         }
 
     }
 
-  *GlobalSp-- = u;
+  *GlobalSp-- = n;
   *GlobalTp-- = OP_IVAL;
   *GlobalSp-- = sign;
   *GlobalTp-- = OP_IVAL;
