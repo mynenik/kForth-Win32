@@ -59,8 +59,6 @@ extern "C" int State;  // TRUE = compile, FALSE = interpret
 extern "C" char* pTIB;
 extern "C"  char TIB[];  // contains current line of input
 
-// void strupr (char*);
-
 // stacks for keeping track of nested control structures
 
 vector<int> ifstack;	// stack for if-then constructs
@@ -361,31 +359,6 @@ char* C_ErrorMessages[] =
 
 //---------------------------------------------------------------
 
-char* ExtractName (char* str, char* name)
-{
-// Starting at ptr str, extract the non delimiter text into
-//   a buffer starting at name with null terminator appended
-//   at the end. Return a pointer to the next position in
-//   str.
-
-    char* delim = "\n\r\t ";
-    char *pStr = str, *pName = name;
-
-    if (*pStr)
-      {
-	while (strchr(delim, *pStr)) ++pStr;
-	while (*pStr && (strchr(delim, *pStr) == NULL))
-	  {
-	    *pName = *pStr;
-	    ++pName;
-	    ++pStr;
-	  }
-      }
-    *pName = 0;
-    return pStr;
-}
-//---------------------------------------------------------------
-
 int IsForthWord (char* name, DictionaryEntry* pE)
 {
 // Locate and Return a copy of the dictionary entry
@@ -402,69 +375,6 @@ int IsForthWord (char* name, DictionaryEntry* pE)
     }
     else
         return FALSE;
-}
-//---------------------------------------------------------------
-
-int IsFloat (char* token, double* p)
-{
-// Check the string token to see if it is an LMI style floating point
-//   number; if so set the value of *p and return True, otherwise
-//   return False.
-
-    char *pStr = token;
-
-//    cout << "\nIsFloat: token = " << token;
-
-    if (strchr(pStr, 'E'))
-    {
-        while ((isdigit(*pStr)) || (*pStr == '-')
-          || (*pStr == 'E') || (*pStr == '+') || (*pStr == '.'))
-        {
-            ++pStr;
-//            cout << ' ' << ((int) *pStr);
-        }
-        if (*pStr == 0)
-        {
-            // LMI Forth style
-
-            --pStr;
-            if (*pStr == 'E') *pStr = '\0';
-            *p = atof(token);
-            return TRUE;
-        }
-    }
-
-    return FALSE;
-}
-//----------------------------------------------------------------
-
-int IsInt (char* token, int* p)
-{
-// Check the string token to see if it is an integer number;
-//   if so set the value of *p and return True, otherwise return False.
-
-  char s[256];
-  *s = (unsigned char) strlen(token);
-  strcpy (s+1, token);
-  *GlobalSp-- = (int) s;
-  *GlobalTp-- = OP_ADDR;
-
-  int err = C_numberquery();
-  if (err)
-    {
-      // stack has probably become corrupted -- call abort
-
-      cout << "Stack error during compilation.\n";
-      L_abort();
-      return FALSE;
-    }
-
-  ++GlobalSp; ++GlobalTp;
-  int b = *GlobalSp++; ++GlobalTp;
-  ++GlobalSp; ++GlobalTp;
-  *p = *GlobalSp;
-
-  return b;
 }
 //---------------------------------------------------------------
 
@@ -963,12 +873,4 @@ endcompile:
   *pLc = linecount;
   return ecode;
 }
-
-
-/* void strupr (char* p)
-{
-// convert string to upper case
-
-  while (*p) {*p = toupper(*p); ++p;}
-} */
 

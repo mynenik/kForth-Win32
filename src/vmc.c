@@ -2,24 +2,13 @@
 vmc.c
 
 C portion of the kForth virtual machine
-Copyright (c) 1998--2001 Krishna Myneni and David P. Wallace, 
-Creative Consulting for Research and Education
 
-Revisions:
-	9-27-1998 -- created.
-	3-1-1999  -- added C_open, C_lseek, C_close, C_read, C_write
-	3-2-1999  -- fixed C_open, added C_ioctl
-	5-27-1999 -- added C_key, C_accept
-	6-09-1999 -- added C_numberquery
-	6-12-1999 -- fixed sign for C_numberquery
-	7-14-1999 -- fixed C_numberquery to reject junk for base > 10
-	9-12-1999 -- added C_system
-	10-7-1999 -- added C_chdir
-	10-9-1999 -- added C_timeanddate
-	10-28-1999 -- added C_keyquery
-	02-19-2001 -- modified C_keyquery function to fix problems with Win/GNU
-	09-19-2001 -- modified C_accept to handle backspace key
-	09-05-2002 -- added C_search, C_compare, and C_msfetch
+Copyright (c) 1998--2020 Krishna Myneni and David P. Wallace, 
+<krishna.myneni@ccreweb.org>
+
+This software is provided under the terms of the GNU
+Affero General Public License (AGPL), v 3.0 or later.
+
 */
 #include<sys/types.h>
 #include<sys/time.h>
@@ -32,16 +21,19 @@ Revisions:
 #include<math.h>
 #include<windows.h>
 #include<conio.h>
+#include "fbc.h"
+#include "kfmacros.h"
 
-#define OP_IVAL 'I'
-#define OP_ADDR 'A'
 #define WSIZE 4
 #define TRUE -1
 #define FALSE 0
 #define E_V_NOTADDR 1
 #define E_V_STK_UNDERFLOW   7
+#define E_V_QUIT  8
+
 #define byte unsigned char
 
+/*  Provided by ForthVM.cpp  */
 extern int* GlobalSp;
 extern byte* GlobalTp;
 extern byte* GlobalIp;
@@ -51,7 +43,13 @@ extern int* BottomOfStack;
 extern int* BottomOfReturnStack;
 extern byte* BottomOfTypeStack;
 extern byte* BottomOfReturnTypeStack;
+
 extern int Base;
+extern int State;
+extern char* pTIB;
+extern int JumpTable[];
+
+int L_dnegate();
 
 // struct timeval ForthStartTime;
 unsigned long int ForthStartTime;
@@ -59,54 +57,24 @@ double* pf;
 double f;
 char temp_str[256];
 
-int C_ftan ()
-{
-	pf  = (double*)(GlobalSp + 1);
-	*pf = tan(*pf);
-	return 0;
-}
+#define DOUBLE_FUNC(x)   pf = (double*)(GlobalSp+1); *pf=x(*pf);
 
-int C_facos ()
-{
-	pf = (double*)(GlobalSp + 1);
-	*pf = acos(*pf);	
-	return 0;
-}
-
-int C_fasin ()
-{
-	pf = (double*)(GlobalSp + 1);
-	*pf = asin(*pf);
-	return 0;
-}
-
-int C_fatan ()
-{
-	pf = (double*)(GlobalSp + 1);
-	*pf = atan(*pf);
-	return 0;
-}
-
-int C_fexp ()
-{
-	pf = (double*)(GlobalSp + 1);
-	*pf = exp(*pf);
-	return 0;
-}
-
-int C_fln ()
-{
-	pf = (double*)(GlobalSp + 1);
-	*pf = log(*pf);
-	return 0;
-}
-
-int C_flog ()
-{
-	pf = (double*)(GlobalSp + 1);
-	*pf = log10(*pf);	
-	return 0;
-}
+int C_ftan  () { DOUBLE_FUNC(tan)  return 0; }
+int C_facos () { DOUBLE_FUNC(acos) return 0; }
+int C_fasin () { DOUBLE_FUNC(asin) return 0; }
+int C_fatan () { DOUBLE_FUNC(atan) return 0; }
+int C_fsinh () { DOUBLE_FUNC(sinh) return 0; }
+int C_fcosh () { DOUBLE_FUNC(cosh) return 0; }
+int C_ftanh () { DOUBLE_FUNC(tanh) return 0; }
+int C_fasinh () { DOUBLE_FUNC(asinh) return 0; }
+int C_facosh () { DOUBLE_FUNC(acosh) return 0; }
+int C_fatanh () { DOUBLE_FUNC(atanh) return 0; }
+int C_fexp  () { DOUBLE_FUNC(exp)   return 0; }
+int C_fexpm1() { DOUBLE_FUNC(expm1) return 0; }
+int C_fln   () { DOUBLE_FUNC(log)   return 0; }
+int C_flnp1 () { DOUBLE_FUNC(log1p) return 0; }
+int C_flog  () { DOUBLE_FUNC(log10) return 0; }
+// int C_falog () { DOUBLE_FUNC(exp10) return 0; }
 
 int C_fpow ()
 {
@@ -337,6 +305,104 @@ int C_accept ()
 }
 
 /*----------------------------------------------------------*/
+
+char* ExtractName (char* str, char* name)
+{
+/*
+Starting at ptr str, extract the non delimiter text into
+a buffer starting at name with null terminator appended
+at the end. Return a pointer to the next position in str.
+*/
+
+    const char* delim = "\n\r\t ";
+    char *pStr = str, *pName = name;
+
+    if (*pStr)
+      {
+        while (strchr(delim, *pStr)) ++pStr;
+        while (*pStr && (strchr(delim, *pStr) == NULL))
+          {
+            *pName = *pStr;
+            ++pName;
+            ++pStr;
+          }
+      }
+    *pName = 0;
+    return pStr;
+}
+/*----------------------------------------------------------*/
+
+int IsFloat (char* token, double* p)
+{
+/*
+Check the string token to see if it is an LMI style floating point
+number; if so set the value of *p and return True, otherwise
+return False.
+*/
+    char *pStr = token;
+
+    if (strchr(pStr, 'E'))
+    {
+        while ((isdigit(*pStr)) || (*pStr == '-')
+          || (*pStr == 'E') || (*pStr == '+') || (*pStr == '.'))
+        {
+            ++pStr;
+        }
+        if (*pStr == 0)
+        {
+            /* LMI Forth style */
+
+            --pStr;
+            if (*pStr == 'E') *pStr = '\0';
+            *p = atof(token);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+/*----------------------------------------------------------*/
+
+int isBaseDigit (int c)
+{
+   int u = toupper(c);
+
+   return ( (isdigit(u) && ((u - 48) < Base)) ||
+            (isalpha(u) && (Base > 10) && ((u - 55) < Base)) );
+}
+/*---------------------------------------------------------*/
+
+int IsInt (char* token, int* p)
+{
+/* Check the string token to see if it is an integer number;
+   if so set the value of *p and return True, otherwise return False.
+Note: strtoul() behavior is different between gcc and dmc compilers.
+*/
+
+  int b = FALSE, sign = FALSE;
+  unsigned u = 0;
+  char *pStr = token, *sos = token, *endp;
+
+  if ((*pStr == '-') || isBaseDigit(*pStr))
+    {
+      if (*pStr == '-') {sign = TRUE; ++sos;}
+      ++pStr;
+      while (isBaseDigit(*pStr))
+        {
+          ++pStr;
+        }
+      if (*pStr == 0)
+        {
+          u = strtoul(sos, &endp, Base);
+          b = TRUE;
+        }
+
+    }
+  
+  *p = (sign) ? -((signed int) u) : u ;
+  return b;
+}
+/*---------------------------------------------------------*/
 
 int C_numberquery ()
 {

@@ -13,6 +13,7 @@
 #define NUMBER_OF_INTRINSIC_WORDS 252
 #define NUMBER_OF_NON_DEFERRED_WORDS 20
 #define NUMBER_OF_IMMEDIATE_WORDS 28
+
 #define PRECEDENCE_NONE         0
 #define PRECEDENCE_IMMEDIATE    1
 #define PRECEDENCE_NON_DEFERRED 2
@@ -50,13 +51,17 @@ struct DictionaryEntry
 };
 
 
-char* ExtractName (char*, char*);
 int IsForthWord (char*, DictionaryEntry*);
-int IsFloat (char*, float*);
-int IsInt (char*, int*);
 int ForthCompiler (vector<byte>*, int*);
 void OutputForthByteCode (vector<byte>*);
 void SetForthInputStream (istream&);
 void SetForthOutputStream (ostream&);
+
+extern "C" {
+   // Provided by vmc.c
+   char* ExtractName (char*, char*);
+   int IsFloat (char*, double*);
+   int IsInt (char*, int*);
+}
 
 #endif
