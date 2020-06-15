@@ -269,9 +269,11 @@ int C_accept ()
 {
   /* stack: ( a n1 -- n2 | wait for n characters to be received ) */
 
+  HANDLE hStdOut;
   char ch, *cp, *cpstart, *bksp = "\010 \010";
-  int n1, n2, nr;
+  int n1, n2, nr, nw;
 
+  hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
   ++GlobalSp; ++GlobalTp;
   n1 = *GlobalSp++; ++GlobalTp;
   if (*GlobalTp != OP_ADDR) return 1;
@@ -292,10 +294,12 @@ int C_accept ()
 	  cp = cpstart;
 	}
 	else
-	  write (0, bksp, 3);
+	  // write (0, bksp, 3);
+	  WriteConsole(hStdOut, bksp, 3, &nw, NULL);
        }
        else {
-	  write (0, cp, 1);
+	  // write (0, cp, 1);
+	  WriteConsole(hStdOut, cp, 1, &nw, NULL);
 	  ++n2; ++cp;
         }
     }

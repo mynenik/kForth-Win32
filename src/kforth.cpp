@@ -55,9 +55,8 @@ int main(int argc, char *argv[])
     if (argc < 2)
       {
 	  cout << "\nkForth v " << version << "\t (Rls. " << Rls_Date << ")";
-	cout << "\nCopyright (c) 1998--2003 Krishna Myneni and David P. Wallace";
-	cout << "\nCreative Consulting for Research and Education";
-	cout << "\nProvided under the GNU General Public License.\n\n";
+	cout << "\nCopyright (c) 1998--2020 Krishna Myneni and David P. Wallace";
+	cout << "\nProvided under the GNU Affero General Public License.\n\n";
       }
 
     nWords = OpenForth();
