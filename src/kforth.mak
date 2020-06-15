@@ -26,6 +26,7 @@ LNK		= LINK
 DLLS		= 
 
 HEADERS		= fbc.h \
+		  kfmacros.h \
 		  ForthCompiler.h \
 		  ForthVM.h
 
