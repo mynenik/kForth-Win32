@@ -49,6 +49,7 @@ extern "C" {
 int CPP_backslash();
 int CPP_lparen();
 int CPP_dotparen();
+int CPP_tick();
 int CPP_bracketsharp();
 int CPP_sharp();
 int CPP_sharps();

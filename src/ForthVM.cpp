@@ -18,6 +18,7 @@
 using namespace std;
 #include "ForthCompiler.h"
 #include "ForthVM.h"
+#include "kfmacros.h"
 
 #define STACK_SIZE 32768
 #define RETURN_STACK_SIZE 4096
@@ -57,7 +58,6 @@ extern "C" {
   // vm functions exported FROM vm.s
 
   int L_depth();
-  int L_tick();
   int L_abort();
   int L_ret();
   int L_dabs();
@@ -775,6 +775,25 @@ int CPP_dots ()
 }
 //---------------------------------------------------------------
 
+int CPP_tick ()
+{
+    // stack: ( "name" -- xt )
+    // Return error if "name" is not found in current search order
+
+    char name[128];
+    pTIB = ExtractName(pTIB, name);
+    strupr(name);
+    DictionaryEntry d;
+    if ( IsForthWord(name, &d) )
+    {
+        PUSH_ADDR((long int) d.Cfa)
+    }
+    else
+        return E_C_UNKNOWNWORD;
+
+    return 0;
+}
+
 int CPP_find ()
 {
   // stack: ( ^str -- ^str 0 | xt_addr 1 | xt_addr -1 )
@@ -1100,7 +1119,7 @@ int CPP_bracketchar ()
 
 int CPP_brackettick ()
 {
-  L_tick ();
+  CPP_tick ();
   return CPP_literal();
 }
 //-------------------------------------------------------------------

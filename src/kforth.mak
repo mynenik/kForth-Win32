@@ -55,7 +55,7 @@ SYMROOT		=
 SYMS		= 
 LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 
-CFLAGS		=  -Jm -mn -o+time -WA -3 -a8 -c -w- -w2 -w3 -w6 
+CFLAGS		=  -Jm -mn -WA -3 -a8 -c -w- 
 LFLAGS		=  /NOI /DE /E /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES
 DEFINES		= -D_CONSOLE -D_CONSOLE=1
 !ENDIF

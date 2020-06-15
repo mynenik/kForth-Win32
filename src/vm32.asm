@@ -1,4 +1,4 @@
-; vm.asm
+; vm32.asm
 ;
 ; The kForth Virtual Machine
 ;
@@ -15,70 +15,7 @@
 ;
 ; Written for the A386 assembler
 ;
-;       a386 +c+O vm.asm
-;
-; Revisions:
-;	9-8-1998  additional functions added: c@, c!, f=, f<>
-;	9-10-1998 added: and, or, not, xor
-;	9-11-1998 added: = , <>, <, >, <=, >=
-;	9-15-1998 added: +!, fsqrt, fsin, fcos, -rot, sp@, rp@
-;	9-17-1998 added: a@
-;	9-27-1998 added: mod, 2*, 2/
-;	10-1-1998 added: pick
-;	10-4-1998 fixed signed integer division and mod; added /MOD
-;	10-6-1998 added ?dup
-;	10-14-1998 added count
-;	10-16-1998 fixed L_div error
-;	10-19-1998 added 0<, 0=, 0>, true, false
-;	10-20-1998 added 2+, 2-
-;	02-09-1999 added execute
-;	03-01-1999 added open, lseek, close, read, write
-;	03-02-1999 added ioctl
-;	03-03-1999 added usleep
-;	03-07-1999 added fill, cmove
-;	03-09-1999 interchanged meaning of execute and call
-;		   to be consistent with ANS Forth
-;	03-27-1999 added +loop, unloop
-;	03-29-1999 added roll
-;	03-31-1999 added cmove>, key
-;	05-05-1999 fixed +loop
-;	05-06-1999 added fround
-;	05-15-1999 added floor
-;	05-26-1999 added fatan2, lshift, rshift
-;	05-27-1999 added u<, quit, base
-;	06-02-1999 added */, */mod
-;	06-09-1999 call CPP functions from vm
-;	07-18-1999 added find
-;	09-06-1999 added pTIB, word, tick
-;	09-12-1999 added system
-;	10-04-1999 added create, variable, fvariable as intrinsic words
-;	10-06-1999 added constant, fconstant as intrinsic words
-;	10-07-1999 added chdir
-;   10-08-1999 added erase, brackettick
-;	10-09-1999 added time&date, ms, question, bl
-;   10-10-1999 added char, forget, cold
-;   10-20-1999 added >file, console
-;	10-28-1999 added key?
-;	12-24-1999 added hooks for f0=, f0<, f0>, u>, s>d, d>f, f>d,
-;	              um*, um/mod, m*, m+, m/, m*/
-;	12-25-1999 added cells, cell+, dfloats, dfloat+
-;	12-27-1999 added bye
-;	01-08-2000 fixed f0<, increased vm loop efficiency
-;	01-13-1999 added ?allot, fixed f0=
-;	01-22-2000 modified + to remove ordering sensitivity for address arithmetic
-;	01-23-2000 added 0<>, [char], .r, u.r, changed opcodes for
-;	             relational operators
-;	01-24-2000 added CPP_literal, CPP_cquote, CPP_squote, CPP_dotquote
-;	02-04-2000 implemented m*, um*
-;	02-26-2000 fixed fm/mod, added sm/rem, um/mod
-;	03-02-2000 modified QUIT to clear the return stacks, added CPP_do
-;	03-05-2000 added CPP_begin, CPP_while, CPP_repeat, CPP_until, CPP_again,
-;	             CPP_leave, CPP_if, CPP_else, CPP_then, CPP_lparen
-;	05-17-2000 added CPP_does
-;	05-18-2000 fix L_plusloop for negative increments
-;	06-04-2000 fix L_roll to roll the typestack as well
-;	06-11-2000 added CPP_case, CPP_endcase, CPP_of, and CPP_endof
-;	06-15-2000 added CPP_querydo, CPP_abortquote
+;       a386 +c+O vm32.asm
 ;
         .386p
 
@@ -94,10 +31,11 @@ EXTRN _C_fmin:NEAR, _C_fmax:NEAR, _C_open:NEAR, _C_close:NEAR
 EXTRN _C_lseek:NEAR, _C_read:NEAR, _C_write:NEAR, _C_ioctl:NEAR
 EXTRN _C_key:NEAR, _C_accept:NEAR, _C_numberquery:NEAR
 EXTRN _C_system:NEAR, _C_chdir:NEAR, _C_timeanddate:NEAR
+EXTRN _CPP_tick:NEAR
 EXTRN _CPP_dot:NEAR, _CPP_udot:NEAR
 EXTRN _CPP_dotr:NEAR, _CPP_udotr:NEAR
 EXTRN _CPP_fdot:NEAR, _CPP_dots:NEAR
-EXTRN _CPP_emit:NEAR, _CPP_cr:NEAR,
+EXTRN _CPP_emit:NEAR, _CPP_cr:NEAR
 EXTRN _CPP_spaces:NEAR
 EXTRN _CPP_type:NEAR, _CPP_words:NEAR
 EXTRN _CPP_word:NEAR, _CPP_allot:NEAR
@@ -165,7 +103,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_bracketsharp, _CPP_tofile, _CPP_console, _CPP_sharpbracket   ; 24 -- 27
           dd _CPP_sharps, _CPP_squote, _CPP_cr, L_bl      ; 28 -- 31
           dd _CPP_spaces, L_store, _CPP_cquote, _CPP_sharp ; 32 -- 35
-          dd _CPP_sign, L_mod, L_and, _L_tick      ; 36 -- 39
+          dd _CPP_sign, L_mod, L_and, _CPP_tick      ; 36 -- 39
           dd _CPP_lparen, _CPP_hold, L_mul, L_add        ; 40 -- 43
           dd L_nop, L_sub, _CPP_dot, L_div     ; 44 -- 47
           dd _L_dabs, L_dnegate, L_umstar, L_umslashmod   ; 48 -- 51
@@ -222,7 +160,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_repeat, _CPP_until, _CPP_again, _CPP_bye ; 252 -- 255
 _DATA ENDS
 
-public _L_depth, _L_abort, _L_quit, _L_tick, _L_ret, _L_dabs
+public _L_depth, _L_abort, _L_quit, _L_ret, _L_dabs
 public _L_2dup, _L_2drop, _L_dminus, _L_mstarslash
 public _vm
 
@@ -387,15 +325,7 @@ ret2:
         xor eax, eax
 retexit:
         ret
-_L_tick:
-        mov ebx, _GlobalSp
-        mov D[ebx], 32
-        sub _GlobalSp, WSIZE
-        dec _GlobalTp
-        call _CPP_word
-        call _CPP_find
-        call L_drop
-        ret
+
 L_tobody:
 	mov ebx, _GlobalSp
 	add ebx, WSIZE
