@@ -30,6 +30,7 @@
 \ =====End of defs for ANS Forth============
 
 \ The following files are available for ANS Forths as well
+include ans-words.4th
 include strings.4th    
 include ansi.4th
 

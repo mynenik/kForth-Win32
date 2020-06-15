@@ -12,27 +12,19 @@
 \ of other ANS Forth words which are not a part of kForth's 
 \ dictionary:   
 \ 
-\     strings.4th 
 \     files.4th 
 \     ansi.4th 
 \     dump.4th
 \
-\ Copyright (c) 2002--2003 Krishna Myneni, Creative Consulting
-\   for Research and Education
+\ Copyright (c) 2002--2020 Krishna Myneni
 \
 \ Provided under the GNU General Public License
 \
-\ Revisions:
-\	2002-09-06  Created    km
-\       2002-10-27  added F~   km
-\	2003-02-15  added D2*, D2/, DMIN, DMAX, 2CONSTANT, 2VARIABLE, 
-\			       2LITERAL  km
-\	2003-03-02  fixed F~ for case of exact equality test  km
-\	2003-03-09  added >NUMBER, DEFER, and IS  km
-\       2003-09-28  added [IF], [ELSE], [THEN]  km
+
 BASE @
 DECIMAL
-\ ============== From the CORE wordset
+
+\ == From the Forth-94 CORE word set ( DPANS94, sec. 6.1)
 
 : SPACE BL EMIT ;
 : CHARS ;
@@ -51,8 +43,7 @@ DECIMAL
     LOOP ; 
  
 
-
-\ ============ From the CORE EXT wordset
+\ == From the Forth-94 CORE EXT word set  ( DPANS94, sec. 6.2)
 
 CREATE PAD 512 ALLOT
 
@@ -61,8 +52,30 @@ CREATE PAD 512 ALLOT
 : WITHIN  OVER - >R - R> U< ;
 
 
+\ == From the Forth-94 STRING word set  ( DPANS94, sec. 17.6)
 
-\ ============ From the DOUBLE number wordset
+: BLANK ( addr u -- | fill u bytes starting at addr with bl character )
+    BL FILL ;
+
+: /STRING ( a1 u1 n -- a2 u2 | adjust size of string by n characters)
+    dup >r - swap r> + swap ;
+
+: -TRAILING ( a n1  -- a n2 | adjust count n1 to remove trailing spaces )
+        dup 0>
+        if
+          dup
+          0 ?do
+            2dup + 1- c@
+            bl =
+            if 1- else leave then
+          loop
+        then ;
+
+: SLITERAL ( a u -- | compile string into definition at compile time )
+        swap postpone literal postpone literal ; immediate
+
+
+\ == Forth-94 DOUBLE number word set ( DPANS94, sec. 8.6)
 
 \ The following are valid for two's-complement systems such as Intel x86
 : D>S  DROP ;
@@ -77,8 +90,7 @@ CREATE PAD 512 ALLOT
 : 2LITERAL   SWAP POSTPONE LITERAL POSTPONE LITERAL ; IMMEDIATE  
 
 
-
-\ ============ From the FLOATING EXT wordset
+\ == Forth-94 FLOATING EXT word set ( DPANS94, sec. 12.6)
 
 : F~ ( f1 f2 f3 -- flag )
      FDUP 0e F> 
@@ -93,8 +105,7 @@ CREATE PAD 512 ALLOT
      THEN ;
  
 
-\ ============ From the PROGRAMMING TOOLS wordset
-( see DPANS94, sec. A.15)
+\ == Forth-94 PROGRAMMING TOOLS EXT word set ( DPANS94, sec. A.15)
 
 : [ELSE]  ( -- )
     1 BEGIN                               \ level
@@ -124,7 +135,7 @@ CREATE PAD 512 ALLOT
 : [THEN]  ( -- )  ;  IMMEDIATE
 
 
-\ ============= De Facto Standard Words
+\ == De Facto Standard Words
 
 : DEFER  ( "name" -- )
       CREATE 1 CELLS ?ALLOT ['] ABORT SWAP ! DOES> A@ EXECUTE ;
@@ -139,3 +150,4 @@ CREATE PAD 512 ALLOT
 
 
 BASE !
+

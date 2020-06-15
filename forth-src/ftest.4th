@@ -3,10 +3,14 @@
 \ Test i/o from files
 \
 \ Requires the following 4th files:
-\
+\       ans-words.4th
 \	strings.4th
 \	files.4th
 \
+include ans-words
+include strings
+include files
+
 variable f1
 create line_buf 256 allot
 
@@ -50,4 +54,8 @@ create line_buf 256 allot
 	    ." Done." cr exit
 	  then
 	again ;
+
+cr .( Test writing and reading ten numbers to/from file ftest1.dat. )
+cr
+ftest1
 

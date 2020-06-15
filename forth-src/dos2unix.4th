@@ -2,12 +2,13 @@
 \
 \ Convert DOS text file into a Unix text file.
 \
-\ Copyright (c) 2000 Krishna Myneni
+\ Copyright (c) 2000--2005 Krishna Myneni
 \
 \ This software is provided under the GNU General Public
 \   License.
 \
 \ Required files:
+\       ans-words.4th
 \	strings.4th
 \	files.4th
 \
@@ -18,7 +19,9 @@
 \ Revisions:
 \
 \	12-21-2000  fixed null line problem  KM
+\       09-28-2005  updated line-by-line due to fix for read-line in files.4th  KM
 \
+include ans-words
 include strings
 include files
 
@@ -50,16 +53,21 @@ create lbuf 256 allot
 
 : line-by-line ( -- | copy from input file to output file, line by line )
 	begin
-	  lbuf 256 if_id @ read-line
-	  if
-	    \ Reached end of input file
-
-	    2drop
+	  lbuf 256 if_id @ read-line  ( -- u flag ior ) 
+	  IF
+	    \ Error reading input file
 	    if_id @ close-file drop
 	    of_id @ close-file drop
-	    exit
-	  then
-	  drop
+	    cr ." Error reading input file" ABORT
+	  ELSE
+	    false = IF
+	      \ Reached end of input file
+	      drop
+	      if_id @ close-file drop
+	      of_id @ close-file drop
+	      exit
+	    THEN
+	  THEN
 	  lbuf swap 1- 0 max 
 	  of_id @ write-line drop
 	again ;

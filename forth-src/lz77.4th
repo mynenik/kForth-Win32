@@ -2,6 +2,7 @@
 \
 \
 \                                                  Wil Baden  1994-12-09
+include ans-words
 include strings
 include files
 

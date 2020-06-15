@@ -7,10 +7,7 @@
 \ This software is provided under the GNU General Public
 \   License.
 \
-\ Revisions:
-\	12-20-1999  created  KM
-\	12-22-1999  remove trailing spaces from input lines  KM
-\
+include ans-words
 include strings
 include files
 

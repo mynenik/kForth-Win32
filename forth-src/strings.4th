@@ -2,144 +2,140 @@
 \
 \ String utility words for kForth
 \
-\ Copyright (c) 1999--2002 Krishna Myneni
+\ Copyright (c) 1999--2020 Krishna Myneni
 \
 \ This software is provided under the terms of the
 \ GNU General Public License.
 \
-\ Revisions:
+\ Please report bugs to <krishna.myneni@ccreweb.org>.
 \
-\	03-24-1999  created  KM
-\	03-25-1999  added number to string conversions  KM
-\	08-12-1999  fixed f>string  KM
-\	10-11-1999  added blank  KM
-\	12-12-1999  fixed f>string for zero case  KM
-\	12-22-1999  added -trailing, scan, and skip  KM
-\	01-23-2000  replaced char with [char] for ANS Forth compatibility  KM
-\	06-16-2000  added isdigit and modified string>s and string>f  KM
-\	09-02-2000  fixed u>string to work over full range  KM
-\	07-12-2001  used built-in Forth words <# #s #> for conversions,
-\	              added ud>string and d>string. f>string now can handle
-\                     decimal places greater than 8  KM
-\	09-21-2001  changed occurences of DO to ?DO  KM
-\	10-02-2001  added parse_args  KM
-\	10-10-2001  fixed problem with f>string when number is 0e  KM
-\	10-15-2001  added /STRING  KM
-\	03-28-2002  added SEARCH, PARSE_TOKEN, PARSE_LINE, IS_LC_ALPHA  KM
-\	07-31-2002  added SLITERAL; removed SEARCH since SEARCH and
-\		      COMPARE are now part of kForth  KM
+\ Glossary:
+\
+\       SCAN        ( a1 u1 c -- a2 u2 )
+\       SKIP        ( a1 u1 c -- a2 u2 )
+\
+\       PARSE_TOKEN ( a u -- a2 u2 a3 u3 )
+\       PARSE_LINE  ( a u -- a1 u1 a2 u2 ... an un n )
+\       PARSE_ARGS  ( a u -- r1 ... rn n )
+\
+\       IS_LC_ALPHA ( c -- b )
+\       ISDIGIT     ( c -- b )
+\       UCASE       ( c1 -- c2 )
+\
+\       STRCPY      ( ^str a -- )
+\       STRLEN      ( a -- u )
+\
+\       STRBUFCPY   ( ^str1 -- ^str2 )
+\       STRCAT      ( a1 u1 a2 u2 -- a3 u3 )
+\       STRPCK      ( a u -- ^str )
+\
+\       U>STRING    ( u -- ^str )
+\       UD>STRING   ( ud -- ^str )
+\       S>STRING    ( n -- ^str )
+\       D>STRING    ( d -- ^str )
+\       STRING>S    ( ^str -- n )
+\
+\       F>STRING    ( r n -- ^str )
+\       F>FPSTR     ( r n -- a u )
+\       F.RD        ( r w n -- )
+\       STRING>F    ( ^str -- r )
+\
+BASE @
+DECIMAL
 
-: blank ( addr u -- | fill u bytes starting at addr with bl character )
-	bl fill ;
+\ Search for first occurrence of character c in a string:
+\   a1 u1 is the string to be searched
+\   a2 u2 is the substring starting with character c
+: scan ( a1 u1 c -- a2 u2 )
+        over 0> IF
+          over 0 DO   \ -- a1 u1 c
+            >r over c@ r@ =
+            IF  r> leave  ELSE  1 /string  r>  THEN
+          LOOP
+        THEN
+        drop ;
 
-: /string ( a1 u1 n -- a2 u2 | adjust size of string by n characters)
-	dup >r - swap r> + swap ;
+\ Search for first occurrence of character not equal to c in a string
+\   a1 u1 is the string to be searched,
+\   a2 u2 is the substring starting with char <> c
+: skip ( a1 u1 c -- a2 u2 )
+        over 0> IF
+          over 0 DO  \ -- a1 u1 c
+            >r over c@ r@ <>
+            IF  r> leave  ELSE  1 /string r>  THEN
+          LOOP
+        THEN
+        drop ;
 
-: -trailing ( a n1  -- a n2 | adjust count n1 to remove trailing spaces )
-	dup 0> 
-	if 
-	  dup 
-	  0 ?do 
-	    2dup + 1- c@ 
-	    bl = 
-	    if 1- else leave then 
-	  loop
-	then ;
-
-: scan ( a1 n1 c -- a2 n2 | search for first occurence of character c )
-	\ a1 n1 are the address and count of the string to be searched, 
-	\ a2 n2 are the address and count of the substring starting with character c
-	-rot dup
-	if
-	  rot over
-	  0 ?do
-	    >r over c@ r@ = r> swap
-	    if
-	      leave
-	    else
-	      >r 1- swap 1+ swap r>
-	    then
-	  loop
-	  drop
-	else
-	  rot drop
-	then ;
-
-: skip ( a1 n1 c -- a2 n2 | search for first occurence of character not equal to c )
-	\ a1 n1 are the address and count of the string to be searched,
-	\ a2 n2 are the adress and count of the substring
-	-rot dup
-	if
-	  rot over
-	  0 ?do
-	    >r over c@ r@ <> r> swap
-	    if
-	      leave
-	    else
-	      >r 1- swap 1+ swap r>
-	    then
-	  loop
-	  drop
-	else
-	  rot drop
-	then ; 
-
-: sliteral ( a u -- | compile string into definition at compile time )
-	swap postpone literal postpone literal ; immediate
-
+\ Parse next token from the string separated by a blank:
+\   a2 u2 is the remaining substring
+\   a3 u3 is the token string
 : parse_token ( a u -- a2 u2 a3 u3)
-	\ parse next token from the string; a3 u3 is the token string
 	BL SKIP 2DUP BL SCAN 2>R R@ - 2R> 2SWAP ;
 
 : parse_line ( a u -- a1 u1 a2 u2 ... n )
 	( -trailing)
 	0 >r
-	begin
+	BEGIN
 	  parse_token
 	  dup
-	while
+	WHILE
 	  r> 1+ >r
 	  2swap
-	repeat  
+	REPEAT  
 	2drop 2drop r> ;
 
-: is_lc_alpha ( n -- flag | true if n is a lower case alphabetical character)
-	DUP 96 > SWAP 123 < AND ;	
-	
-: isdigit ( n -- flag | return true if n is ascii value of '0' through '9' )
-	dup [char] / > swap [char] : < and ;
+\ Return true if c is a lower case alphabetical character
+: is_lc_alpha ( c -- b )
+        [char] a [ char z 1+ ] literal within ;
 
-: strcpy ( ^str addr -- | copy a counted string to addr )
+\ Return true if c is ascii value of '0' through '9'
+: isdigit ( n -- flag | return true if n is ascii value of '0' through '9' )
+        [char] 0 [ char 9 1+ ] literal within ;
+
+\ Change alphabet character to upper case
+: ucase ( c1 -- c2 )
+        dup [CHAR] a [ CHAR z 1+ ] literal within
+        IF 95 and THEN ;
+
+\ Copy a counted string to address a
+: strcpy ( ^str a -- )
 	>r dup c@ 1+ r> swap cmove ;
 
-: strlen ( addr -- len | determine length of a null terminated string )
-	\ This word is not intended for use on counted strings;
-	\ Use "count" to obtain the length of a counted string.
-	0
-	begin
-	  over c@ 0= dup not if -rot 1+ swap 1+ swap rot then 
-	until
-	nip ;
+\ Length of a null-terminated string
+: strlen ( addr -- u )
+        0
+        BEGIN over c@
+        WHILE 1+ >r 1+ r>
+        REPEAT
+        nip ;
 
+\ Circular String Buffer
 
 16384 constant STR_BUF_SIZE
-create string_buf STR_BUF_SIZE allot	\ dynamic string buffer
+create string_buf STR_BUF_SIZE allot
 variable str_buf_ptr
 string_buf str_buf_ptr !
 
-: adjust_str_buf_ptr ( u -- | adjust pointer to accomodate u bytes )
+\ Adjust current pointer to accomodate u bytes.
+\ This word is for internal use only.
+: adjust_str_buf_ptr ( u -- )
 	str_buf_ptr a@ swap +
 	string_buf STR_BUF_SIZE + >=
-	if
+	IF
 	  string_buf str_buf_ptr !	\ wrap pointer
-	then ;
+	THEN ;
 
-: strbufcpy ( ^str1 -- ^str2 | copy a counted string to the dynamic string buffer )
+\ Copy a counted string to the circular string buffer
+: strbufcpy ( ^str1 -- ^str2 )
 	dup c@ 1+ dup adjust_str_buf_ptr
 	swap str_buf_ptr a@ strcpy
 	str_buf_ptr a@ dup rot + str_buf_ptr ! ;
 
-: strcat ( addr1 u1 addr2 u2 -- addr3 u3 )
+\ Concatenate two strings. Return the concatenated string
+\ which is stored in the circular buffer and has limited
+\ persistence.
+: strcat ( a1 u1 a2 u2 -- a3 u3 )
 	rot 2dup + 1+ adjust_str_buf_ptr 
 	-rot
 	2swap dup >r
@@ -152,7 +148,8 @@ string_buf str_buf_ptr !
 	dup r@ + 1+ str_buf_ptr !
 	r> ;
 
-: strpck ( addr u -- ^str | create counted string )
+\ Make a counted string in the circular buffer from a string
+: strpck ( a u -- ^str )
 	255 min dup 1+ adjust_str_buf_ptr 
 	dup str_buf_ptr a@ c!
 	tuck str_buf_ptr a@ 1+ swap cmove
@@ -160,68 +157,87 @@ string_buf str_buf_ptr !
 	str_buf_ptr a@
 	dup rot 1+ + str_buf_ptr ! ;
 
-\
 \ Base 10 number to string conversions and vice-versa
-\
 
-32 constant NUMBER_BUF_LEN
-create number_buf NUMBER_BUF_LEN allot
+\ Return counted string representing u in base 10
+: u>string ( u -- ^str )
+    base @ swap decimal 0 <# #s #> strpck swap base ! ;
 
-create fnumber_buf 64 allot
-variable number_sign
-variable number_val
-variable fnumber_sign
-fvariable fnumber_val
-fvariable fnumber_divisor
-variable fnumber_power
-variable fnumber_digits
-variable fnumber_whole_part
-
-variable number_count
-
-: u>string ( u -- ^str | create counted string to represent u in base 10 )
-	base @ swap decimal 0 <# #s #> strpck swap base ! ;
-
-: ud>string ( ud -- ^str | create counted string to represent ud in base 10 )
+\ Return counted string representing ud in base 10
+: ud>string ( ud -- ^str )
 	base @ >r decimal <# #s #> strpck r> base ! ;
 
-: d>string ( d -- ^str | create counted string to represent d in base 10 )
-	dup >r dabs ud>string r> 0< if s" -" rot count strcat strpck then ;
+\ Return counted string representing d in base 10
+: d>string ( d -- ^str )
+    dup >r dabs ud>string r> 
+    0< IF s" -" rot count strcat strpck THEN ;
 
-: s>string ( n -- ^str | create counted string to represent n in  base 10 )
-	dup >r abs u>string
-	r> 0< if
+\ Return counted string representing n in  base 10
+: s>string ( n -- ^str )
+    dup >r abs u>string r> 0< IF
 	  s" -" rot count strcat strpck
-	then ;
+    THEN ;
 
-: string>s ( ^str -- n | always interpret in base 10 )
+variable number_sign
+variable number_val
+
+\ Convert counted string to signed integer in base 10
+: string>s ( ^str -- n )
 	0 number_val !
 	false number_sign !
 	count
-	0 ?do
+	0 ?DO
 	  dup c@
 	  case
 	    [char] -  of true number_sign ! endof 
 	    [char] +  of false number_sign ! endof 
 	    dup isdigit 
-	    if
+	    IF
 	      dup [char] 0 - number_val @ 10 * + number_val !
-	    then
+	    THEN
 	  endcase
 	  1+
-	loop
+	LOOP
 	drop
-	number_val @ number_sign @ if negate then ;
+	number_val @ number_sign @ IF negate THEN ;
 
+\ Convert r to a formatted fixed point string with
+\ n decimal places, 0 <= n <= 17.
+\ WARNING: Requesting a number fixed point decimal places which
+\   results in total number of digits > 17 will give
+\   incorrect results, e.g. "65536.9921875e 15 f>fpstr type"
+\   will output garbage (20 digits are being requested).
+: f>fpstr ( r n -- a u )
+    0 max 17 min >r 10e r@ s>f f** 
+    f* fround f>d dup -rot dabs
+    <# r> 0 ?DO # LOOP [char] . hold #s rot sign #> ; 
 
-: f>string ( f n -- ^str | conversion is in exponential format with n places )
+\ Print an fp number as a fixed point string with
+\ n decimal places, right-justified in a field of width, w
+: f.rd ( r w n -- )
+    swap >r f>fpstr dup 20 > IF
+      \ Too many digits requested in fixed point output
+      2drop r> 0 ?DO [char] * emit LOOP
+    ELSE
+      r> over - 
+      dup 0> IF spaces ELSE drop THEN type
+    THEN ;
+
+create   fnumber_buf 64 allot
+variable fnumber_sign
+variable fnumber_power
+variable fnumber_digits
+
+\ Convert r to a counted string in scientific notation
+\ with n decimal places
+: f>string ( f n -- ^str )
 	>r 
 	fdup f0= IF
 	  f>d <# r> 0 ?do # loop #> s" e0" strcat 
 	  s"  0." 2swap strcat strpck exit	  
 	THEN
 	r>
-	dup 16 swap u< if drop fdrop c" ******" exit then  \ test for invalid n
+	dup 16 swap u< IF drop fdrop c" ******" exit THEN  \ test for invalid n
 	fnumber_digits !
 	0 fnumber_power !
 	fdup 0e f< fnumber_sign ! 
@@ -256,7 +272,14 @@ variable number_count
 	fnumber_power @ s>string count strcat
 	strpck 	;
 
-	 
+
+32 constant NUMBER_BUF_LEN
+create number_buf NUMBER_BUF_LEN allot
+fvariable fnumber_val
+fvariable fnumber_divisor
+variable  fnumber_whole_part
+variable  number_count
+
 : string>f ( ^str -- f )
 	true fnumber_whole_part !
 	0e fnumber_val f!
@@ -266,7 +289,7 @@ variable number_count
 	begin
 	  dup c@
 	  case  
-	    [char] - of true fnumber_sign ! endof
+	    [char] - of true  fnumber_sign ! endof
 	    [char] + of false fnumber_sign ! endof
 	    [char] . of false fnumber_whole_part ! endof
 	    dup isdigit
@@ -306,13 +329,13 @@ variable number_count
 	fnumber_val f@ 
 	fnumber_sign @ if fnegate then ;	 
 
-
-: parse_args ( a u -- f1 ... fn n | parse a string delimited by spaces into fp args )
+\ Parse a string delimited by spaces into fp numbers
+: parse_args ( a u -- r1 ... rn n )
 	0 >r 
 	2>r
-	begin
+	BEGIN
 	  r@ 0>
-	while
+	WHILE
 	  2r> bl skip 
 	  2dup 
 	  bl scan 2>r
@@ -321,6 +344,7 @@ variable number_count
 	  strpck string>f
 	  2r> r> 
 	  1+ >r 2>r
-	repeat
+	REPEAT
 	2r> 2drop r> ;
-	  
+
+BASE !
