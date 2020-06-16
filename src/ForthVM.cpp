@@ -1703,6 +1703,39 @@ int CPP_refill()
 }
 //-------------------------------------------------------------------
 
+int CPP_spstore()
+{
+    // stack: ( addr -- | make the stack ptr point to a new address)
+
+    DROP
+    CHK_ADDR
+    int* p = (int*) TOS; --p;
+    if ((p > BottomOfStack) || (p < ForthStack))
+        return E_V_BADSTACKADDR;  // new SP must be within its stack space
+    int n = (int) (p - ForthStack);
+
+    GlobalSp = ForthStack + n;
+    GlobalTp = (byte *) ForthTypeStack + n;
+    return 0;
+}
+//--------------------------------------------------------------------
+
+int CPP_rpstore()
+{
+    // stack: ( addr -- | make the stack ptr point to a new address)
+
+    DROP
+    CHK_ADDR
+    int* p = (int*) TOS; --p;
+    if ((p > BottomOfReturnStack) || (p < ForthReturnStack))
+        return E_V_BADSTACKADDR;  // new RP must be within its stack space
+
+    int n = (int) (p - ForthReturnStack);
+    GlobalRp = ForthReturnStack + n;
+    GlobalRtp = ForthReturnTypeStack + n;
+    return 0;
+}
+
 int CPP_dump ()
 {
   // stack: ( a u -- | display memory; u bytes starting at address a )

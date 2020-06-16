@@ -168,7 +168,7 @@
 #define OP_RADTODEG    156
 #define OP_DPLUS       157
 #define OP_DMINUS      158
-
+#define OP_DULT        159
 #define OP_INC         160
 #define OP_DEC         161
 #define OP_ABS         162
@@ -197,7 +197,8 @@
 #define OP_FNEG        185
 #define OP_FPOW        186
 #define OP_FSQRT       187
-
+#define OP_SPSTORE     188
+#define OP_RPSTORE     189
 #define OP_FEQ         190
 #define OP_FNE         191
 #define OP_FLT         192

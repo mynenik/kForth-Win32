@@ -131,9 +131,9 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _C_flog, L_fatan2, L_ftrunc, L_ftrunctos   ; 136 -- 139
           dd _C_fmin, _C_fmax, L_floor, L_fround ; 140 -- 143
           dd L_dlt, L_dzeroeq, L_deq, L_twopush  ; 144 -- 147
-          dd L_twopop, L_tworfetch, L_stod, L_stof      ; 148 -- 151
+          dd L_twopop, L_tworfetch, L_stod, L_stof   ; 148 -- 151
           dd L_dtof, L_froundtos, L_ftod, L_degtorad ; 152 -- 155
-          dd L_radtodeg, L_dplus, _L_dminus, L_nop   ; 156 -- 159
+          dd L_radtodeg, L_dplus, _L_dminus, L_dult  ; 156 -- 159
           dd L_inc, L_dec, L_abs, L_neg        ; 160 -- 163
           dd L_min, L_max, L_twostar, L_twodiv ; 164 -- 167
           dd L_twoplus, L_twominus, L_cfetch, L_cstore ; 168 -- 171
@@ -141,7 +141,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_sffetch, L_sfstore, L_spfetch, L_plusstore ; 176 -- 179
           dd L_fadd, L_fsub, L_fmul, L_fdiv    ; 180 -- 183
           dd L_fabs, L_fneg, _C_fpow, L_fsqrt   ; 184 -- 187
-          dd L_nop, L_nop, L_feq, L_fne        ; 188 -- 191
+          dd _CPP_spstore, _CPP_rpstore, L_feq, L_fne ; 188 -- 191
           dd L_flt, L_fgt, L_fle, L_fge        ; 192 -- 195
           dd L_fzeroeq, L_fzerolt, L_fzerogt, L_nop ; 196 -- 199
           dd L_drop, L_dup, L_swap, L_over     ; 200 -- 203
@@ -165,6 +165,16 @@ public _L_2dup, _L_2drop, _L_dminus, _L_mstarslash
 public _vm
 
 _TEXT   SEGMENT PUBLIC  FLAT
+
+LDSP     MACRO  mov ebx, _GlobalSp  #EM
+STSP     MACRO  mov _GlobalSp, ebx  #EM
+INC_DSP  MACRO  add ebx, WSIZE      #EM
+DEC_DSP  MACRO  sub ebx, WSIZE      #EM
+INC2_DSP MACRO  add ebx, 2*WSIZE    #EM
+INC_DTSP MACRO  inc _GlobalTp       #EM
+DEC_DTSP MACRO  dec _GlobalTp       #EM
+INC2_DTSP MACRO add _GlobalTp, 2    #EM
+
 _vm     proc    near
 ;
         push ebp
@@ -400,39 +410,47 @@ L_erase:
         call L_fill
         ret
 L_cmove:
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
-        mov ebx, [ebx]
-        push ebx
-        call L_swap
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
+        LDSP
+	mov eax, WSIZE
+        add ebx, eax
+        mov ecx, [ebx]		; nbytes in ecx
+        cmp ecx, 0
+	jnz cmove1
+	add ebx, 2*WSIZE
+        STSP
+	add _GlobalTp, 3
+	xor eax, eax
+	ret
+cmove1: INC_DTSP
+	add ebx, eax
+	mov edx, [ebx] 		; dest addr in edx
+	STSP
+	INC_DTSP
         mov ebx, _GlobalTp
         mov al, [ebx]
         cmp al, OP_ADDR
         jz cmove2
-        pop ebx
         mov eax, E_NOT_ADDR
         ret
-cmove2: mov ebx, _GlobalSp
-        mov ebx, [ebx]
-        push ebx
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
+cmove2: LDSP
+	mov eax, WSIZE	
+	add ebx, eax
+	mov eax, [ebx]
+	STSP
+	INC_DTSP
         mov ebx, _GlobalTp
-        mov al, [ebx]
-        cmp al, OP_ADDR
+        mov bl, [ebx]
+        cmp bl, OP_ADDR
         jz cmove3
-        pop ebx
-        pop ebx
         mov eax, E_NOT_ADDR
         ret
-cmove3: mov ebx, _GlobalSp
-        mov ebx, [ebx]
-        push ebx
-        call _memcpy
-        add esp, 12
+cmove3: mov ebx, eax  		; src addr in ebx
+cmoveloop:
+	mov al, [ebx]
+	mov [edx], al
+	inc ebx
+	inc edx
+	loop cmoveloop
         xor eax, eax
         ret
 L_cmovefrom:
@@ -1166,8 +1184,35 @@ L_dlt:
 	  mov D[ebx], 0
 	  xor eax, eax	
 	  ret
-L_dult:	
-	  ret
+L_dult: ; b = (d1.hi u< d2.hi) OR ((d1.hi = d2.hi) AND (d1.lo u< d2.lo))
+        LDSP
+        mov ecx, WSIZE
+        xor edx, edx
+        add ebx, ecx
+        mov eax, [ebx]
+        cmp D[ebx + 2*WSIZE], eax
+        sete dl
+        setb dh
+        add ebx, ecx
+        mov eax, [ebx]
+        add ebx, ecx
+        STSP
+        add ebx, ecx
+        cmp [ebx], eax
+        setb al
+        and dl, al
+        or dl, dh
+        xor eax, eax
+        mov al, dl
+        neg eax
+        mov [ebx], eax
+        mov eax, _GlobalTp
+        add eax, 4
+        mov B[eax], OP_IVAL
+        dec eax
+        mov _GlobalTp, eax
+        xor eax, eax
+        ret
 L_querydup:
         mov ebx, _GlobalSp
         mov eax, [ebx + WSIZE]

@@ -148,6 +148,8 @@ CREATE PAD 512 ALLOT
         >BODY !
       THEN ; IMMEDIATE
 
+: [DEFINED] ( "name" -- b ) bl word find nip ;
+: [UNDEFINED] ( "name" -- b ) [DEFINED] invert ;
 
 BASE !
 

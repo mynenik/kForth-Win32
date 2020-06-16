@@ -30,6 +30,10 @@
 #define E_V_THEN_NO_IF     15
 #define E_V_ENDOF_NO_OF    16
 #define E_V_NO_CASE        17
+#define E_V_OPENFILE       18
+#define E_V_BADSTACKADDR   19
+#define E_V_DIV_OVERFLOW   20
+#define E_V_DBL_OVERFLOW   21
 
 #define DEFAULT_OUTPUT_FILENAME "kforth.out"
 
@@ -111,6 +115,8 @@ int CPP_nondeferred();
 int CPP_evaluate();
 int CPP_source();
 int CPP_refill();
+int CPP_spstore();
+int CPP_rpstore();
 }
 #endif
 
