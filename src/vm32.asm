@@ -94,7 +94,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_immediate, _CPP_fconstant, _CPP_create, _CPP_dotquote ; 112 -- 115
           dd _CPP_type, _CPP_udot, _CPP_variable, _CPP_words ; 116 -- 119
           dd _CPP_does, _C_system, _C_chdir, _C_search        ; 120 -- 123
-          dd L_or, _C_compare, L_not, L_nop         ; 124 -- 127
+          dd L_or, _C_compare, L_not, L_move   ; 124 -- 127
           dd L_fsin, L_fcos, _C_ftan, _C_fasin ; 128 -- 131
           dd _C_facos, _C_fatan, _C_fexp, _C_fln   ; 132 -- 135
           dd _C_flog, L_fatan2, L_ftrunc, L_ftrunctos   ; 136 -- 139
@@ -177,6 +177,50 @@ _DROP MACRO
 	STSP
 	INC_DTSP
 #EM
+
+_DUP MACRO        ; assume DSP in ebx reg
+	mov ecx, [ebx + WSIZE]
+	mov [ebx], ecx
+	DEC_DSP
+	STSP
+	mov ecx, _GlobalTp
+	mov al, [ecx + 1]
+	mov B[ecx], al
+	xor eax, eax
+	DEC_DTSP
+#EM
+
+_SWAP MACRO
+        LDSP
+        INC_DSP
+        mov eax, [ebx]
+	INC_DSP
+	mov ecx, [ebx]
+	mov [ebx], eax
+	mov [ebx - WSIZE], ecx
+        mov ebx, _GlobalTp
+        inc ebx
+        mov al, [ebx]
+        inc ebx
+	mov cl, [ebx]
+        mov B[ebx], al
+	mov B[ebx-1], cl
+        xor eax, eax
+#EM
+
+_OVER MACRO
+        LDSP
+        mov eax, [ebx + 2*WSIZE]
+        mov [ebx], eax
+        DEC_DSP
+        STSP
+        mov ebx, _GlobalTp
+        mov al, B[ebx + 2]
+        mov B[ebx], al
+        dec _GlobalTp
+        xor eax, eax
+#EM
+
 
 ; Error jumps
 E_not_addr:
@@ -385,20 +429,20 @@ L_ms:
         call L_usleep
         ret
 L_fill:
-        call L_swap
+        _SWAP
         mov eax, WSIZE
         add _GlobalSp, eax
-        inc _GlobalTp
-        mov ebx, _GlobalSp
+        INC_DTSP
+        LDSP
         mov ebx, [ebx]
         push ebx
         add _GlobalSp, eax
-        inc _GlobalTp
-        mov ebx, _GlobalSp
+        INC_DTSP
+        LDSP
         mov ebx, [ebx]
         push  ebx
         add _GlobalSp, eax
-        inc _GlobalTp
+        INC_DTSP
         mov ebx, _GlobalTp
         mov al, [ebx]
         cmp al, OP_ADDR
@@ -407,7 +451,7 @@ L_fill:
         pop ebx
         mov eax, E_NOT_ADDR
         jmp fillexit
-fill2:  mov ebx, _GlobalSp
+fill2:  LDSP
         mov ebx, [ebx]
         push ebx
         call _memset
@@ -416,13 +460,60 @@ fill2:  mov ebx, _GlobalSp
 fillexit:
         ret
 L_erase:
-        mov ebx, _GlobalSp
+        LDSP
         mov D[ebx], 0
-        sub ebx, WSIZE
-        mov _GlobalSp, ebx
-        dec _GlobalTp
+        DEC_DSP
+        STSP
+        DEC_DTSP
         call L_fill
         ret
+L_blank:    ; not in fbc.h or in JumpTable yet
+	LDSP
+	mov D[ebx], 32
+	DEC_DSP
+	STSP
+	DEC_DTSP
+	call L_fill
+	ret
+L_move:
+	mov eax, WSIZE
+	add _GlobalSp, eax
+	INC_DTSP
+	LDSP
+	mov ebx, [ebx]
+	push ebx
+	_SWAP
+	mov eax, WSIZE
+	add _GlobalSp, eax
+	INC_DTSP
+	mov ebx, _GlobalTp
+	mov al, [ebx]
+	cmp al, OP_ADDR
+	jz move2
+	pop ebx
+	mov eax, E_NOT_ADDR
+	ret
+move2:  LDSP
+	mov ebx, [ebx]
+	push ebx
+	mov eax, WSIZE
+	add _GlobalSp, eax
+	INC_DTSP
+	mov ebx, _GlobalTp
+	mov al, [ebx]
+	cmp al, OP_ADDR
+	jz move3
+	pop ebx
+	pop ebx
+	mov eax, E_NOT_ADDR
+	ret
+move3:  LDSP
+	mov ebx, [ebx]
+	push ebx
+	call _memmove
+	add esp, 12
+	xor eax, eax
+	ret
 L_cmove:
         LDSP
 	mov eax, WSIZE
@@ -518,10 +609,9 @@ cmovefromloop:
         xor eax, eax
         ret
 L_call:
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
-        call [ebx]
+        LDSP
+        _DROP
+        call [ebx]   ; <== fixme == may need another level of indirection
         xor eax, eax
         ret
 L_push:
@@ -988,25 +1078,23 @@ L_xor:
         xor eax, eax
         ret
 L_lshift:
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
-        mov ecx, [ebx]
-        mov eax, [ebx + WSIZE]
+        LDSP
+        _DROP
+	mov ecx, [ebx]
+	mov eax, [ebx + WSIZE]
         shl eax, cl
-        mov [ebx + WSIZE], eax
-        xor eax, eax
-        ret
+	mov [ebx + WSIZE], eax
+	xor eax, eax
+        NEXT
 L_rshift:
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
-        mov ecx, [ebx]
-        mov eax, [ebx + WSIZE]
-        shr eax, cl
-        mov [ebx + WSIZE], eax
-        xor eax, eax
-        ret
+        LDSP
+	_DROP
+	mov ecx, [ebx]
+	mov eax, [ebx + WSIZE]
+	shr eax, cl
+	mov [ebx + WSIZE], eax
+	xor eax, eax
+	NEXT
 L_eq:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1248,61 +1336,46 @@ L_querydup:
 L_querydupexit:
         ret
 L_drop:
-        add _GlobalSp, WSIZE
-        inc _GlobalTp
-        ret
-L_dup:
-        mov ebx, _GlobalSp
-        mov eax, [ebx + WSIZE]
-        mov [ebx], eax
-	  sub ebx, WSIZE
-	  mov _GlobalSp, ebx
-        mov ebx, _GlobalTp
-        mov al, B[ebx + 1]
-        mov B[ebx], al
-        dec _GlobalTp
-        xor eax, eax
-        ret
-L_swap:
-        mov ebx, _GlobalSp
-        add ebx, WSIZE
-        mov eax, [ebx + WSIZE]
-        xchg eax, D[ebx]
-        mov [ebx + WSIZE], eax
-        mov ebx, _GlobalTp
-        inc ebx
-        mov al, [ebx + 1]
-        xchg al, B[ebx]
-        mov B[ebx + 1], al
-        xor eax, eax
-        ret
-L_over:
-        mov ebx, _GlobalSp
-        mov eax, [ebx + 2*WSIZE]
-        mov [ebx], eax
-        mov eax, ebx
-        sub eax, WSIZE
-        mov _GlobalSp, eax
-        mov ebx, _GlobalTp
-        mov al, B[ebx + 2]
-        mov B[ebx], al
-        dec _GlobalTp
-        xor eax, eax
-        ret
-L_rot:
-        call L_swap
         LDSP
-        add ebx, WSIZE
-        mov eax, [ebx + 2*WSIZE]
-        xchg eax, [ebx]
-        xchg eax, [ebx + 2*WSIZE]
-        mov ebx, _GlobalTp
-        inc ebx
-        mov al, B[ebx + 2]
-        xchg al, B[ebx]
-        xchg al, B[ebx + 2]
-        xor eax, eax
-        ret
+        _DROP
+        NEXT
+L_dup:
+	LDSP
+	_DUP
+	NEXT
+L_swap:
+	_SWAP
+	NEXT
+L_over:
+	_OVER
+	NEXT
+L_rot:
+        push ebp
+        LDSP
+	mov eax, WSIZE
+	add ebx, eax    ; ebx = tos
+	mov ebp, ebx    ; ebp = tos
+	add ebx, eax
+	add ebx, eax    ; ebx = tos + 2 cells
+	mov ecx, [ebx]  ; ecx = [tos + 2 cells]
+	mov edx, [ebp]  ; edx = [tos]
+	mov [ebp], ecx  ; [tos] = ecx
+	add ebp, eax    ; ebp = tos + 1 cell
+	mov ecx, [ebp]  ; ecx = [tos + 1 cell]
+	mov [ebp], edx  ; [tos + 1 cell] = edx
+	mov [ebx], ecx  ; [tos + 2 cells] = ecx
+	mov ebx, _GlobalTp
+	inc ebx
+	mov ebp, ebx
+	mov cx, [ebx]
+	add ebx, 2
+	mov al, [ebx]
+	mov B[ebp], al
+	inc ebp
+	mov W[ebp], cx
+	xor eax, eax
+	pop ebp
+	NEXT
 L_minusrot:
         LDSP
         mov eax, [ebx + WSIZE]
@@ -1324,18 +1397,18 @@ L_minusrot:
         mov al, [ebx - 1]
         mov B[ebx + 2], al
         xor eax, eax
-        ret
+        NEXT
 L_nip:
-        call L_swap
+        _SWAP
         add _GlobalSp, WSIZE
-        inc _GlobalTp
-        ret
+        INC_DTSP
+        NEXT
 L_tuck:
-        call L_swap
-        call L_over
-        ret
+        _SWAP
+        _OVER
+        NEXT
 L_pick:
-        mov ebx, _GlobalSp
+        LDSP
         mov eax, [ebx + WSIZE]
         inc eax
         inc eax
@@ -1831,15 +1904,12 @@ L_add:
         xor eax, eax
         ret
 L_sub:
-        mov eax, WSIZE
-        mov ebx, _GlobalSp
-        add ebx, eax
-        mov eax, [ebx]
-        sub [ebx + WSIZE], eax
-        mov _GlobalSp, ebx
-        inc _GlobalTp   ; result will have type of first operand
-        xor eax, eax
-        ret
+	LDSP
+	_DROP            ; result will have type of first operand
+	mov eax, [ebx]
+	sub [ebx + WSIZE], eax
+	xor eax, eax
+	NEXT
 L_mul:
         mov ecx, WSIZE
         mov ebx, _GlobalSp
@@ -1854,14 +1924,12 @@ L_mul:
         ret
 L_div:
         add _GlobalSp, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
+        INC_DTSP
+        LDSP
         mov eax, [ebx]
         cmp eax, 0
-        jnz div1
-        mov eax, E_DIV_ZERO
-        jmp divexit
-div1:   add ebx, WSIZE
+        jz E_div_zero
+        INC_DSP
         mov eax, [ebx]
         cdq
         idiv D[ebx - WSIZE]
@@ -1871,17 +1939,21 @@ divexit:
         ret
 L_mod:
         call L_div
+	cmp eax, 0
+	jnz divexit
         mov [ebx], edx
-        ret
+        NEXT
 L_slashmod:
         call L_div
-        sub ebx, WSIZE
+        cmp eax, 0
+	jnz divexit
+	DEC_DSP
         mov [ebx], edx
-        sub ebx, WSIZE
-        mov _GlobalSp, ebx
-        dec _GlobalTp
-        call L_swap
-        ret
+        DEC_DSP
+        STSP
+        DEC_DTSP
+        _SWAP
+        NEXT
 L_starslash:
         mov eax, WSIZE
         sal eax, 1
@@ -1898,10 +1970,10 @@ L_starslash:
 L_starslashmod:
         call L_starslash
         mov [ebx], edx
-        sub ebx, WSIZE
-        mov _GlobalSp, ebx
-        dec _GlobalTp
-        call L_swap
+        DEC_DSP
+        STSP
+        DEC_DTSP
+        _SWAP
         ret
 L_plusstore:
         mov ebx, _GlobalTp

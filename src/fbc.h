@@ -136,7 +136,7 @@
 #define OP_OR          124
 #define OP_COMPARE     125
 #define OP_NOT         126
-
+#define OP_MOVE        127
 #define OP_FSIN        128
 #define OP_FCOS        129
 #define OP_FTAN        130
