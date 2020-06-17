@@ -1,6 +1,7 @@
 // ForthCompiler.h
 //
 // Copyright (c) 1998--2020 Krishna Myneni
+//   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU Affero
 // General Public License (AGPL) v 3.0 or later.
@@ -9,10 +10,14 @@
 #ifndef __FORTHCOMPILER_H__
 #define __FORTHCOMPILER_H__
 
+#define WSIZE 4
+
 #define byte unsigned char
-#define NUMBER_OF_INTRINSIC_WORDS 255
-#define NUMBER_OF_NON_DEFERRED_WORDS 20
-#define NUMBER_OF_IMMEDIATE_WORDS 28
+#define word unsigned short int
+
+// #define NUMBER_OF_INTRINSIC_WORDS 255
+// #define NUMBER_OF_NON_DEFERRED_WORDS 20
+// #define NUMBER_OF_IMMEDIATE_WORDS 28
 
 #define PRECEDENCE_NONE         0
 #define PRECEDENCE_IMMEDIATE    1
@@ -41,11 +46,18 @@
 #define E_C_INCOMPLETECASE  11
 #define E_C_VMERROR         12
 
+struct WordTemplate
+{
+    const char* WordName;
+    word WordCode;
+    byte Precedence;
+};
+
 struct DictionaryEntry
 {
   char WordName[32];
+  word WordCode;
   byte Precedence;
-  byte WordCode;
   void* Cfa;
   void* Pfa;
 };

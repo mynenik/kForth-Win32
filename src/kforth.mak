@@ -27,6 +27,7 @@ DLLS		=
 
 HEADERS		= fbc.h \
 		  kfmacros.h \
+		  ForthWords.h \
 		  ForthCompiler.h \
 		  ForthVM.h
 

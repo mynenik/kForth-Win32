@@ -181,7 +181,7 @@
 #define OP_TWOMINUS    169
 #define OP_CFETCH      170
 #define OP_CSTORE      171
-#define OP_WFETCH      172
+#define OP_SWFETCH     172
 #define OP_WSTORE      173
 #define OP_DFFETCH     174
 #define OP_DFSTORE     175

@@ -13,9 +13,10 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "fbc.h"
 #include <vector>
 using namespace std;
+
+#include "fbc.h"
 #include "ForthCompiler.h"
 #include "ForthVM.h"
 #include "kfmacros.h"
@@ -27,13 +28,9 @@ extern int debug;
 
 // Provided by ForthCompiler.cpp
 
-// void strupr (char*);
+extern WordTemplate ForthWords[];
 void SetForthInputStream (istream&);
 void SetForthOutputStream (ostream&);
-extern char* WordNames[];
-extern byte WordCodes[];
-extern byte NondeferredWords[];
-extern byte ImmediateWords[];
 extern int linecount;
 extern istream* pInStream ;    // global input stream
 extern ostream* pOutStream ;   // global output stream
@@ -48,15 +45,21 @@ extern vector<int> recursestack;
 extern vector<int> casestack;
 extern vector<int> ofstack;
 extern DictionaryEntry NewWord;
+extern size_t NUMBER_OF_INTRINSIC_WORDS;
 
 extern "C" {
 
-  // functions exported FROM vmc.c
+  // functions provided by vmc.c
 
   void set_start_time(void);
+  int C_bracketsharp(void);
+  int C_sharps(void);
+  int C_sharpbracket(void);
+  int C_word(void);
 
-  // vm functions exported FROM vm.s
+  // vm functions provided by vm32.asm
 
+  int L_initfpu();
   int L_depth();
   int L_abort();
   int L_ret();
@@ -67,8 +70,7 @@ extern "C" {
   int L_mstarslash();
   int vm (byte*);     // the machine code virtual machine
 
-
-  // global pointers and state variables exported TO other modules
+  // global pointers exported to other modules
 
   int* GlobalSp;      // the global stack pointer
   byte* GlobalTp;     // the global type stack pointer
@@ -88,7 +90,7 @@ extern "C" {
   char TIB[256];
   char NumberBuf[256];
 }
-
+extern "C" int JumpTable[];
 
 // The Dictionary
 
@@ -128,7 +130,11 @@ char* V_ErrorMessages[] =
 	"ELSE without matching IF",
 	"THEN without matching IF",
 	"ENDOF without matching OF",
-	"ENDCASE without matching CASE"
+	"ENDCASE without matching CASE",
+	"Cannot open file",
+	"Address outside of stack space",
+	"Division overflow",
+	"Unsigned double number overflow"
 };
 
 
@@ -139,49 +145,35 @@ int OpenForth ()
 // Initialize the FORTH dictionary; return the size of
 //   the dictionary.
 
-    int i;
+    int i, wcode;
     DictionaryEntry d;
 
     set_start_time();
 
     for (i = 0; i < NUMBER_OF_INTRINSIC_WORDS; i++)
     {
-        strcpy(d.WordName, WordNames[i]);
-        d.WordCode = WordCodes[i];
-	d.Precedence = 0;
-        d.Pfa = new byte[2];
+        strcpy(d.WordName, ForthWords[i].WordName);
+	wcode = ForthWords[i].WordCode;
+        d.WordCode   = wcode;
+	d.Precedence = ForthWords[i].Precedence;
+        d.Pfa = new byte[8];
 	d.Cfa = d.Pfa;
 	byte* bp = (byte*) d.Pfa;
-	bp[0] = d.WordCode;
-	bp[1] = OP_RET;
-
+	if (wcode >> 8)
+	{
+		// bp[0] = OP_CALLADDR;
+		// *((int*) (bp+1)) = (int) JumpTable[wcode]; 
+		// bp[5] = OP_RET;
+		bp[0] = OP_ABORT;
+		bp[1] = OP_RET;
+	}
+	else
+	{
+		bp[0] = wcode;
+		bp[1] = OP_RET;
+	}
         Dictionary.push_back(d);
     }
-
-    // Set up precedence for immediate and non-deferred words
-
-    vector<DictionaryEntry>::iterator wI;
-
-    for (wI = Dictionary.begin(); wI < Dictionary.end(); wI++)
-      {
-	for (i = 0; i < NUMBER_OF_IMMEDIATE_WORDS; i++)
-	  {
-	    if (wI->WordCode == ImmediateWords[i])
-	      {
-		wI->Precedence |= PRECEDENCE_IMMEDIATE;
-		break;
-	      }
-	  }
-	for (i = 0; i < NUMBER_OF_NON_DEFERRED_WORDS; i++)
-	  {
-	    if (wI->WordCode == NondeferredWords[i])
-	      {
-		wI->Precedence |= PRECEDENCE_NON_DEFERRED;
-		break;
-	      }
-	  }
-      }
-
 
     // Initialize the global stack pointers
 
@@ -196,7 +188,6 @@ int OpenForth ()
     GlobalRtp = BottomOfReturnTypeStack;
 
     vmEntryRp = BottomOfReturnStack;
-
     Base = 10;
     State = FALSE;
 

@@ -20,6 +20,14 @@
 using namespace std;
 #include "ForthCompiler.h"
 
+const int IMMEDIATE   = PRECEDENCE_IMMEDIATE;
+const int NONDEFERRED = PRECEDENCE_NON_DEFERRED;
+
+#include "ForthWords.h"
+
+size_t NUMBER_OF_INTRINSIC_WORDS =
+   sizeof(ForthWords) / sizeof(ForthWords[0]);
+
 extern int debug;
 
 // Provided by ForthVM.cpp
@@ -27,7 +35,10 @@ extern int debug;
 extern vector<DictionaryEntry> Dictionary;
 extern vector<char*> StringTable;
 void ClearControlStacks();
+void OpsCopyInt (int, int);
 void OpsPushInt (int);
+void OpsPushTwoInt (int, int);
+void OpsPushDouble (double);
 void PrintVM_Error (int);
 int ForthVM (vector<byte>*, int**, byte**);
 vector<DictionaryEntry>::iterator LocateWord (char*);
@@ -49,11 +60,11 @@ extern "C" {
   int L_abort();
 }
 
-
+// Provided by vm32.asm
 extern "C" int* GlobalSp;
 extern "C" int* GlobalRp;
 extern "C" byte* GlobalTp;
-extern "C" int* JumpTable;
+extern "C" int JumpTable[];
 extern "C" int Base;
 extern "C" int State;  // TRUE = compile, FALSE = interpret
 extern "C" char* pTIB;
@@ -85,261 +96,6 @@ vector<byte>* pCurrentOps;
 // The word currently being compiled (needs to be global)
 
 DictionaryEntry NewWord;
-
-char* WordNames[] =
-    {
-        "WORD", "WORDS", "FIND",
-	"'", "[']", "[", "]",
-	"CREATE", "DOES>", ">BODY",
-	"FORGET", "COLD",
-	"ALLOT", "?ALLOT",
-	"LITERAL", "EVALUATE", "IMMEDIATE",
-	"CONSTANT", "FCONSTANT",
-	"VARIABLE", "FVARIABLE",
-	"CELLS", "CELL+", "CHAR+",
-	"DFLOATS", "DFLOAT+", "SFLOATS", "SFLOAT+",
-	"?", "@", "!",
-	"2@", "2!", "A@",
-        "C@", "C!",
-        "W@", "W!",
-        "F@", "F!",
-        "DF@", "DF!",
-        "SF@", "SF!",
-	"SP@", "SP!",
-	"RP@", "RP!",
-        ">R", "R>", "R@",
-	"2>R", "2R>", "2R@",
-        "?DUP",
-        "DUP", "DROP", "SWAP",
-        "OVER", "ROT", "-ROT",
-	"NIP", "TUCK", "PICK", "ROLL",
-        "2DUP", "2DROP", "2SWAP",
-        "2OVER", "2ROT",
-        "DEPTH",
-	"BASE", "BINARY", "DECIMAL", "HEX",
-        "1+", "1-", "2+", "2-",
-	"2*", "2/",
-        "DO", "?DO",
-	"LOOP", "+LOOP",
-	"LEAVE", "UNLOOP",
-	"I", "J",
-	"BEGIN", "WHILE", "REPEAT",
-	"UNTIL", "AGAIN",
-	"IF", "ELSE", "THEN",
-	"CASE", "ENDCASE", "OF", "ENDOF",
-	"RECURSE", "BYE",
-        "EXIT", "QUIT", "ABORT",
-	"ABORT\x22", "USLEEP",
-        "EXECUTE", "CALL", "SYSTEM",
-	"TIME&DATE", "MS", "MS@",
-	"CHDIR", ">FILE", "CONSOLE",
-	"\\", "(", ".(",
-	"\x22", "C\x22", "S\x22",
-	"COUNT", "NUMBER?",
-	"<#", "#", "#S",
-	"#>", "SIGN", "HOLD",
-        ".", ".R",
-	"D.",
-	"U.", "U.R",
-	"F.", ".\x22", ".S",
-        "CR", "SPACES", "EMIT", "TYPE",
-	"BL", "[CHAR]", "CHAR",
-	"KEY", "KEY?", "ACCEPT",
-        "SEARCH", "COMPARE",
-        "=", "<>", "<", ">", "<=", ">=",
-	"U<", "U>",
-	"0<", "0=", "0<>", "0>",
-	"D<", "D=", "DU<", "D0=",
-	"FALSE", "TRUE",
-        "AND", "OR", "XOR", "NOT", "INVERT",
-	"LSHIFT", "RSHIFT",
-        "+", "-", "*", "/",
-	"MOD", "/MOD",
-	"*/", "*/MOD", "+!",
-	"D+", "D-",
-	"M+", "M*", "M/",
-	"M*/",
-	"UM*", "UM/MOD",
-	"FM/MOD", "SM/REM",
-        "ABS", "NEGATE", "MIN", "MAX",
-	"DABS", "DNEGATE",
-	"OPEN", "LSEEK", "CLOSE",
-	"READ", "WRITE", "IOCTL",
-	"FILL", "ERASE",
-	"CMOVE", "CMOVE>",
-        "FDUP", "FDROP", "FSWAP",
-        "FOVER", "FROT",
-        "F=", "F<>", "F<", "F>", "F<=", "F>=",
-	"F0=", "F0<",
-        "F+", "F-", "F*", "F/", "F**", "FSQRT",
-        "FABS", "FNEGATE",
-	"FLOOR", "FROUND", "FTRUNC",
-	"FMIN", "FMAX",
-        "FSIN", "FCOS", "FTAN",
-        "FACOS", "FASIN", "FATAN",
-	"FATAN2",
-        "FLOG", "FLN", "FEXP",
-        "DEG>RAD", "RAD>DEG",
-        "S>D", "S>F", "D>F", "F>D",
-	"FROUND>S", "FTRUNC>S"
-    };
-
-byte WordCodes[] =
-    {
-        OP_WORD, OP_WORDS, OP_FIND,
-	OP_TICK, OP_BRACKETTICK, OP_LBRACKET, OP_RBRACKET,
-	OP_CREATE, OP_DOES, OP_TOBODY,
-	OP_FORGET, OP_COLD,
-	OP_ALLOT, OP_QUERYALLOT,
-	OP_LITERAL, OP_EVALUATE, OP_IMMEDIATE,
-	OP_CONSTANT, OP_FCONSTANT,
-	OP_VARIABLE, OP_FVARIABLE,
-	OP_CELLS, OP_CELLPLUS, OP_INC,
-	OP_DFLOATS, OP_DFLOATPLUS, OP_CELLS, OP_CELLPLUS,
-	OP_QUESTION, OP_FETCH, OP_STORE,
-	OP_DFFETCH, OP_DFSTORE, OP_AFETCH,
-        OP_CFETCH, OP_CSTORE,
-        OP_WFETCH, OP_WSTORE,
-        OP_DFFETCH, OP_DFSTORE,
-        OP_DFFETCH, OP_DFSTORE,
-        OP_SFFETCH, OP_SFSTORE,
-	OP_SPFETCH, OP_SPSTORE,
-	OP_RPFETCH, OP_RPSTORE,
-        OP_PUSH, OP_POP, OP_RFETCH,
-        OP_TWOPUSH, OP_TWOPOP, OP_TWORFETCH,
-        OP_QUERYDUP,
-        OP_DUP, OP_DROP, OP_SWAP,
-        OP_OVER, OP_ROT, OP_MINUSROT,
-	OP_NIP, OP_TUCK, OP_PICK, OP_ROLL,
-        OP_2DUP, OP_2DROP, OP_2SWAP,
-        OP_2OVER, OP_2ROT,
-        OP_DEPTH,
-	OP_BASE, OP_BINARY, OP_DECIMAL, OP_HEX,
-        OP_INC, OP_DEC, OP_TWOPLUS, OP_TWOMINUS,
-	OP_TWOSTAR, OP_TWODIV,
-        OP_DO, OP_QUERYDO,
-	OP_LOOP, OP_PLUSLOOP,
-	OP_LEAVE, OP_UNLOOP,
-	OP_I, OP_J,
-	OP_BEGIN, OP_WHILE, OP_REPEAT,
-	OP_UNTIL, OP_AGAIN,
-	OP_IF, OP_ELSE, OP_THEN,
-	OP_CASE, OP_ENDCASE, OP_OF, OP_ENDOF,
-	OP_RECURSE, OP_BYE,
-        OP_RET, OP_QUIT, OP_ABORT,
-	OP_ABORTQUOTE, OP_USLEEP,
-        OP_EXECUTE, OP_CALL, OP_SYSTEM,
-	OP_TIMEANDDATE, OP_MS, OP_MSFETCH,
-	OP_CHDIR, OP_TOFILE, OP_CONSOLE,
-	OP_BACKSLASH, OP_LPAREN, OP_DOTPAREN,
-	OP_CQUOTE, OP_CQUOTE, OP_SQUOTE,
-	OP_COUNT, OP_NUMBERQUERY,
-	OP_BRACKETSHARP, OP_SHARP, OP_SHARPS,
-	OP_SHARPBRACKET, OP_SIGN, OP_HOLD,
-        OP_DOT, OP_DOTR,
-	OP_DDOT,
-	OP_UDOT, OP_UDOTR,
-	OP_FDOT, OP_DOTQUOTE, OP_DOTS,
-        OP_CR, OP_SPACES, OP_EMIT, OP_TYPE,
-	OP_BL, OP_BRACKETCHAR, OP_CHAR,
-	OP_KEY, OP_KEYQUERY, OP_ACCEPT,
-        OP_SEARCH, OP_COMPARE,
-        OP_EQ, OP_NE, OP_LT, OP_GT, OP_LE, OP_GE,
-	OP_ULT, OP_UGT,
-	OP_ZEROLT, OP_ZEROEQ, OP_ZERONE, OP_ZEROGT,
-	OP_DLT, OP_DEQ, OP_DULT, OP_DZEROEQ,
-	OP_FALSE, OP_TRUE,
-        OP_AND, OP_OR, OP_XOR, OP_NOT, OP_NOT,
-	OP_LSHIFT, OP_RSHIFT,
-        OP_ADD, OP_SUB, OP_MUL, OP_DIV,
-	OP_MOD, OP_SLASHMOD,
-	OP_STARSLASH, OP_STARSLASHMOD, OP_PLUSSTORE,
-	OP_DPLUS, OP_DMINUS,
-	OP_MPLUS, OP_MSTAR, OP_MSLASH,
-	OP_MSTARSLASH,
-	OP_UMSTAR, OP_UMSLASHMOD,
-	OP_FMSLASHMOD, OP_SMSLASHREM,
-        OP_ABS, OP_NEG, OP_MIN, OP_MAX,
-	OP_DABS, OP_DNEGATE,
-	OP_OPEN, OP_LSEEK, OP_CLOSE,
-	OP_READ, OP_WRITE, OP_IOCTL,
-	OP_FILL, OP_ERASE,
-	OP_CMOVE, OP_CMOVEFROM,
-        OP_2DUP, OP_2DROP, OP_2SWAP,
-        OP_2OVER, OP_2ROT,
-        OP_FEQ, OP_FNE, OP_FLT, OP_FGT, OP_FLE, OP_FGE,
-	OP_FZEROEQ, OP_FZEROLT,
-        OP_FADD, OP_FSUB, OP_FMUL, OP_FDIV, OP_FPOW, OP_FSQRT,
-        OP_FABS, OP_FNEG,
-	OP_FLOOR, OP_FROUND, OP_FTRUNC,
-	OP_FMIN, OP_FMAX,
-        OP_FSIN, OP_FCOS, OP_FTAN,
-        OP_FACOS, OP_FASIN, OP_FATAN,
-	OP_FATAN2,
-        OP_FLOG, OP_FLN, OP_FEXP,
-        OP_DEGTORAD, OP_RADTODEG,
-        OP_STOD, OP_STOF, OP_DTOF, OP_FTOD,
-	OP_FROUNDTOS, OP_FTRUNCTOS
-    };
-
-// Non-deferred words are executed immediately by
-//   the interpreter in the non-compiling state.
-
-byte NondeferredWords[] =
-{
-  OP_BACKSLASH,
-  OP_DOTPAREN,
-  OP_BINARY,
-  OP_DECIMAL,
-  OP_HEX,
-  OP_WORD,
-  OP_TICK,
-  OP_CREATE,
-  OP_FORGET,
-  OP_COLD,
-  OP_ALLOT,
-  OP_QUERYALLOT,
-  OP_CONSTANT,
-  OP_FCONSTANT,
-  OP_VARIABLE,
-  OP_FVARIABLE,
-  OP_CHAR,
-  OP_TOFILE,
-  OP_CONSOLE,
-};
-
-byte ImmediateWords[] =
-{
-  OP_BACKSLASH,
-  OP_LPAREN,
-  OP_DOTPAREN,
-  OP_BRACKETCHAR,
-  OP_BRACKETTICK,
-  OP_LBRACKET,
-  OP_RBRACKET,
-  OP_LITERAL,
-  OP_CQUOTE,
-  OP_SQUOTE,
-  OP_DOTQUOTE,
-  OP_DO,
-  OP_QUERYDO,
-  OP_LEAVE,
-  OP_ABORTQUOTE,
-  OP_BEGIN,
-  OP_WHILE,
-  OP_REPEAT,
-  OP_UNTIL,
-  OP_AGAIN,
-  OP_IF,
-  OP_ELSE,
-  OP_THEN,
-  OP_CASE,
-  OP_ENDCASE,
-  OP_OF,
-  OP_ENDOF,
-  OP_RECURSE
-};
-
 
 char* C_ErrorMessages[] =
 {
