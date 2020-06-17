@@ -8,7 +8,7 @@
 #ifndef __FORTHVM_H__
 #define __FORTHVM_H__
 
-#define MAX_V_ERR_MESSAGES 18
+#define MAX_V_ERR_MESSAGES 22
 
 // Virtual machine error codes
 

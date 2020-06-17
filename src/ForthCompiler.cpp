@@ -97,7 +97,7 @@ vector<byte>* pCurrentOps;
 
 DictionaryEntry NewWord;
 
-char* C_ErrorMessages[] =
+const char* C_ErrorMessages[] =
 {
 	"",
 	"",

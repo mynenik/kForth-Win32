@@ -31,6 +31,7 @@ extern int debug;
 extern WordTemplate ForthWords[];
 void SetForthInputStream (istream&);
 void SetForthOutputStream (ostream&);
+extern const char* C_ErrorMessages[];
 extern int linecount;
 extern istream* pInStream ;    // global input stream
 extern ostream* pOutStream ;   // global output stream
@@ -111,7 +112,7 @@ bool FileOutput = FALSE;
 vector<byte>* pPreviousOps;    // copy of ptr to old opcode vector for [ and ]
 vector<byte> tempOps;          // temporary opcode vector for [ and ]
 
-char* V_ErrorMessages[] =
+const char* V_ErrorMessages[] =
 {
 	"",
 	"Not data type ADDR",
@@ -285,11 +286,20 @@ void OpsPushInt (int i)
 }
 //---------------------------------------------------------------
 
-void PrintVM_Error (int ecode)
+void PrintVM_Error (int ec)
 {
-  if ((ecode >= 0) && (ecode < MAX_V_ERR_MESSAGES))
-    *pOutStream << "VM Error(" << ecode << "): " <<
-      V_ErrorMessages[ecode] << '\n';
+  int ei = ec & 0xFF;
+  int imax = (ec >> 8) ? MAX_C_ERR_MESSAGES : MAX_V_ERR_MESSAGES;
+  const char *pMsg;
+  char elabel[12];
+  
+  if ((ei >= 0) && (ei < imax)) {
+    pMsg = (ec >> 8) ? C_ErrorMessages[ei] : V_ErrorMessages[ei];
+    if (ec >> 8) strcpy( elabel, "Compiler");
+    else strcpy(elabel, "VM");
+    *pOutStream << elabel << "Error(" << ei << "): " <<
+      pMsg << endl;
+  }
 }
 //---------------------------------------------------------------
 

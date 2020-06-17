@@ -15,10 +15,6 @@
 #define byte unsigned char
 #define word unsigned short int
 
-// #define NUMBER_OF_INTRINSIC_WORDS 255
-// #define NUMBER_OF_NON_DEFERRED_WORDS 20
-// #define NUMBER_OF_IMMEDIATE_WORDS 28
-
 #define PRECEDENCE_NONE         0
 #define PRECEDENCE_IMMEDIATE    1
 #define PRECEDENCE_NON_DEFERRED 2
@@ -27,24 +23,24 @@
 #define EXECUTE_CURRENT_ONLY    2
 #define TRUE -1
 #define FALSE 0
-#define MAX_ERR_MESSAGES 13
+#define MAX_C_ERR_MESSAGES 13
 
 // Error codes; The corresponding error messages are given in
 //   the const char* array C_ErrorMessages, in ForthCompiler.cpp
 
-#define E_C_NOERROR         0
-#define E_C_ENDOFSTREAM     1
-#define E_C_ENDOFDEF        2
-#define E_C_ENDOFSTRING     3
-#define E_C_NOTINDEF        4
-#define E_C_OPENFILE        5
-#define E_C_INCOMPLETEIF    6
-#define E_C_INCOMPLETEBEGIN 7
-#define E_C_UNKNOWNWORD     8
-#define E_C_NODO            9
-#define E_C_INCOMPLETELOOP  10
-#define E_C_INCOMPLETECASE  11
-#define E_C_VMERROR         12
+#define E_C_NOERROR         0x100
+#define E_C_ENDOFSTREAM     0x101
+#define E_C_ENDOFDEF        0x102
+#define E_C_ENDOFSTRING     0x103
+#define E_C_NOTINDEF        0x104
+#define E_C_OPENFILE        0x105
+#define E_C_INCOMPLETEIF    0x106
+#define E_C_INCOMPLETEBEGIN 0x107
+#define E_C_UNKNOWNWORD     0x108
+#define E_C_NODO            0x109
+#define E_C_INCOMPLETELOOP  0x10A
+#define E_C_INCOMPLETECASE  0x10B
+#define E_C_VMERROR         0x10C
 
 struct WordTemplate
 {
