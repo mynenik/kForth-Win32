@@ -28,9 +28,6 @@ DECIMAL
 
 : SPACE BL EMIT ;
 : CHARS ;
-: MOVE ( src dest u -- ) 
-	>R 2DUP OVER R@ + OVER > -ROT < AND R> SWAP \ is src < dest < src+u ?
-	IF CMOVE> ELSE CMOVE THEN ;
 
 : >NUMBER ( ud1 a1 u1 -- ud2 a2 u2 )
     DUP 0 ?DO

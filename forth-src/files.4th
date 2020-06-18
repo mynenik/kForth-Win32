@@ -21,6 +21,8 @@
 \   REPOSITION-FILE  ( ud fd -- ior )
 \   FILE-SIZE    ( fd -- ud ior )
 \   FILE-EXISTS  ( ^filename -- flag )
+\   DELETE-FILE  ( c-addr u -- ior )
+\   RENAME-FILE  ( c-addr1 u1 c-addr2 u2 -- ior ) -- see restrictions
 \   READ-LINE    ( c-addr u1 fd -- u2 flag ior )
 \   WRITE-LINE   ( c-addr u fd -- ior )
 \
@@ -30,7 +32,7 @@
 \ Public License.
 \
 \ Requires:
-\
+\  ans-words.4th
 \  strings.4th
 \
 
@@ -101,6 +103,23 @@ variable read_count
 : file-exists
 	count R/O open-file
 	if drop false else close-file drop true then ;	
+
+\ DELETE-FILE ( c-addr u -- ior )
+\ Delete the file named by c-addr, u
+\ Forth 2012 File Access words 11.6.1.1190
+: delete-file
+        s" cmd.exe /c del " 2swap strcat strpck system ;
+
+\ RENAME-FILE ( c-addr1 u1 c-addr2 u2 -- ior )
+\ Rename the file named c-addr,u1 to name given by c-addr2,u2
+\ Forth 2012 File Access wordset 11.6.2.2130
+\
+\ RENAME-FILE has a limit for the sum of the two filenames
+\ to be less than 250 pchars because of limitations in the
+\ argument to SYSTEM.
+: rename-file
+    2>r 2>r s" cmd.exe /c rename " 2r> strcat s"  " strcat 2r> strcat
+    strpck system ;
 
 \ READ-LINE ( c-addr u1 fileid -- u2 flag ior )
 \ Read the next line from the file into memory at c-addr
