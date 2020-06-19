@@ -459,7 +459,7 @@ int C_system ()
   /* stack: ( ^str -- n | n is the return code for the command in ^str ) */
 
   char* cp;
-  int nc, nr;
+  int nc, nr, ec;
 
   ++GlobalSp; ++GlobalTp;
   if (*GlobalTp != OP_ADDR) return 1;     /* VM error: not an address */
@@ -468,7 +468,8 @@ int C_system ()
   strncpy (temp_str, cp+1, nc);
   temp_str[nc] = 0;
   nr = WinExec(temp_str, SW_SHOW);
-  *GlobalSp-- = nr;
+  ec = (nr > 31) ? 0 : -1;    /* WinExec return code > 31 means no error */
+  *GlobalSp-- = ec;
   *GlobalTp-- = OP_IVAL;
   return 0;
 }
