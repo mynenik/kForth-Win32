@@ -191,6 +191,7 @@ int OpenForth ()
     vmEntryRp = BottomOfReturnStack;
     Base = 10;
     State = FALSE;
+    L_initfpu();
 
     return Dictionary.size();
 }

@@ -76,14 +76,43 @@ int C_flnp1 () { DOUBLE_FUNC(log1p) return 0; }
 int C_flog  () { DOUBLE_FUNC(log10) return 0; }
 // int C_falog () { DOUBLE_FUNC(exp10) return 0; }
 
+// powA  is copied from the source of the function pow() in paranoia.c,
+//   at  http://www.math.utah.edu/~beebe/software/ieee/
+double powA(double x, double y) /* return x ^ y (exponentiation) */
+{
+    double xy, ye;
+    long i;
+    int ex, ey = 0, flip = 0;
+
+    if (!y) return 1.0;
+
+    if ((y < -1100. || y > 1100.) && x != -1.) return exp(y * log(x));
+
+    if (y < 0.) { y = -y; flip = 1; }
+    y = modf(y, &ye);
+    if (y) xy = exp(y * log(x));
+    else xy = 1.0;
+    /* next several lines assume >= 32 bit integers */
+    x = frexp(x, &ex);
+    if ((i = (long)ye, i)) for(;;) {
+        if (i & 1) { xy *= x; ey += ex; }
+        if (!(i >>= 1)) break;
+        x *= x;
+        ex *= 2;
+        if (x < .5) { x *= 2.; ex -= 1; }
+    }
+    if (flip) { xy = 1. / xy; ey = -ey; }
+    return ldexp(xy, ey);
+}
+
 int C_fpow ()
 {
 	pf = (double*)(GlobalSp + 1);
 	f = *pf;
 	++pf;
-	*pf = pow (*pf, f);
+	*pf = powA (*pf, f);
 	GlobalSp += 2;
-	GlobalTp += 2;
+	INC2_DTSP
 	return 0;
 }				
 

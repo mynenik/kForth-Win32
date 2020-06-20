@@ -131,6 +131,8 @@ _DATA ENDS
 
 public _L_depth, _L_abort, _L_quit, _L_ret, _L_dabs
 public _L_2dup, _L_2drop, _L_dminus, _L_mstarslash
+public _L_initfpu
+
 public _vm
 
 _TEXT   SEGMENT PUBLIC  FLAT
@@ -237,6 +239,17 @@ E_div_zero:
 
 E_div_overflow:
         mov eax, E_DIV_OVERFLOW
+        ret
+
+; set kForth's default fpu settings
+_L_initfpu:
+        mov ebx, _GlobalSp
+        fnstcw offset NDPcw
+        mov ecx, NDPcw
+        and ch, 240
+        or  ch, 2
+        mov [ebx], ecx
+        fldcw [ebx]
         ret
 
 _vm     proc    near
