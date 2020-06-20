@@ -15,7 +15,6 @@
 include tester
 
 \ ===== kForth requires =============
-include ans-words
 : ptr CREATE 1 CELLS ?ALLOT ! DOES> a@ ;
 \ ===== end kForth requires =========
 
@@ -827,14 +826,15 @@ TESTING EVALUATE
 \ ------------------------------------------------------------------------
 
 \ TESTING SOURCE >IN WORD
-TESTING SOURCE WORD
-
+\ TESTING SOURCE WORD
+TESTING WORD
+(
 : GS1 S" SOURCE" 2DUP EVALUATE
        >R SWAP >R = R> R> = ;
 { GS1 -> <TRUE> <TRUE> }
-
-COMMENT SKIPPING  >IN tests
-
+)
+\ COMMENT SKIPPING  >IN tests
+COMMENT SKIPPING SOURCE >IN tests
 (
 VARIABLE SCANS
 : RESCAN?  -1 SCANS +! SCANS @ IF 0 >IN ! THEN ;
