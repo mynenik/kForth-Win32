@@ -485,10 +485,14 @@ int C_numberquery ()
 
 int C_system ()
 {
-  /* stack: ( ^str -- n | n is the return code for the command in ^str ) */
+  /* stack: ( ^str -- n )
+   *  n is the exit code for the process, or -1 if process
+   *  could not be launched or its exit code could not be obtained. */
 
   char* cp;
   int nc, nr, ec;
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
 
   ++GlobalSp; ++GlobalTp;
   if (*GlobalTp != OP_ADDR) return 1;     /* VM error: not an address */
@@ -496,8 +500,25 @@ int C_system ()
   nc = *cp;
   strncpy (temp_str, cp+1, nc);
   temp_str[nc] = 0;
-  nr = WinExec(temp_str, SW_SHOW);
-  ec = (nr > 31) ? 0 : -1;    /* WinExec return code > 31 means no error */
+  // nr = WinExec(temp_str, SW_SHOW);
+  // ec = (nr > 31) ? 0 : -1;    /* WinExec return code > 31 means no error */
+
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  ZeroMemory(&pi, sizeof(pi));
+  nr = CreateProcess(NULL, temp_str,NULL,NULL,FALSE,0,NULL,NULL,&si,&pi);
+  if (nr) {
+    /* Process creation succeeded; wait for child exit */
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    nr = GetExitCodeProcess(pi.hProcess, &ec);
+    if (nr == 0) ec = -1;
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+  }
+  else
+    ec = -1;
+    
   *GlobalSp-- = ec;
   *GlobalTp-- = OP_IVAL;
   return 0;
