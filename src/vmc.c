@@ -234,16 +234,22 @@ int C_write ()
 
 int C_ioctl ()
 {
-  /* stack: ( fd request addr -- err | device control function ) */
-  int fd, request;
-  char* argp;
-
+  /* stack: ( handle request ain nbin aout nbout -- err | device control function ) */
+  int handle, request, nbin, nbout, success, nbret;
+  char *inbuf, *outbuf;
+  
   ++GlobalSp; ++GlobalTp;
-  argp = *((char**) GlobalSp);  /* don't do type checking on argp */
-  ++GlobalSp; ++GlobalTp;
-  request = *GlobalSp++;
-  fd = *GlobalSp;
-  *GlobalSp-- = -1; // ioctl(fd, request, argp);
+  nbout = *GlobalSp++; GlobalTp++;
+  outbuf  = *((char**) GlobalSp);
+  GlobalSp++;GlobalTp++;
+  nbin  = *GlobalSp++; GlobalTp++;
+  inbuf = *((char**) GlobalSp);
+  GlobalSp++; GlobalTp++;
+  request = *GlobalSp++; GlobalTp++;
+  handle = *GlobalSp;
+  success = DeviceIoControl(handle, request, inbuf, nbin, outbuf, nbout,
+		  &nbret, NULL);
+  *GlobalSp-- = !success;
   return 0;
 }
 /*----------------------------------------------------------*/
