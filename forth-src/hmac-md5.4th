@@ -8,11 +8,11 @@
 \ Adapted for kForth by Krishna Myneni 2/6/2003 --- hardcoded for
 \   little endian systems. 
 \ ============== kForth requirements =========================
-\ Requires kForth 1.0.14 or later
-include ans-words.4th
-include strings.4th
-include files.4th
-include macro.4th
+\ Requires kForth 1.0.14 or later, with following libraries:
+\   ans-words.4th
+\   strings.4th
+\   files.4th
+\   macro.4th
 \ ============== end of kForth requirements ===================
 
 \ Code for MACROs has been moved to macro.4th so that it
@@ -332,7 +332,7 @@ MACRO [MD5-MAC]  " MD5int  MD5  dofullblocks  dofinal"
 
 : InputFileName  ( -- ior)
   CR  CR  ." Filename: "  PAD  DUP  80  ACCEPT ( adr #)
-  R/O  OPEN-FILE  SWAP  rfileid !  ( ior)
+  R/O BIN OPEN-FILE  SWAP  rfileid !  ( ior)
 ;
 
 : TryAgain?  ( -- ?)
@@ -363,7 +363,7 @@ MACRO MD5trans  " buf[]  MD5  "
     WHILE  TryAgain? IF  EXIT  THEN       \ Not valid, try (not) again
     REPEAT
   ELSE
-    R/O  OPEN-FILE  SWAP  rfileid !
+    R/O BIN OPEN-FILE  SWAP  rfileid !
     ABORT" Invalid input file."
   THEN    
   MD5int				\ Valid file, init transform
