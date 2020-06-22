@@ -132,6 +132,36 @@ CREATE PAD 512 ALLOT
 : [THEN]  ( -- )  ;  IMMEDIATE
 
 
+\ == From the EXCEPTION word set ( DPANS94, sec. 9.6)
+( also see DPANS94, sec. A.9 )
+
+variable handler
+: empty-handler ;
+
+' empty-handler  handler !
+
+: CATCH ( xt -- exception# | 0 )
+    SP@ >R  ( xt )  \ save data stack pointer
+    HANDLER A@ >R   \ and previous handler
+    RP@ HANDLER !   \ save return point for THROW
+    EXECUTE         \ execute returns if no THROW
+    R> HANDLER !    \ restore previous handler
+    R> DROP         \ discard saved state
+    0               \ normal completion
+;
+
+: THROW ( ??? exception# -- ??? exception# )
+    ?DUP IF
+      HANDLER A@ RP!   \ restore previous return stack
+      R> HANDLER !     \ restore prev handler
+      R> SWAP >R
+      SP! DROP R>      \ restore stack
+        \  Return to the caller of CATCH because return
+        \  stack is restored to the state that existed
+        \  when CATCH began execution
+    THEN
+;
+
 \ == De Facto Standard Words
 
 : DEFER  ( "name" -- )
