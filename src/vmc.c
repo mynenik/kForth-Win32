@@ -28,8 +28,10 @@ Affero General Public License (AGPL), v 3.0 or later.
 #define TRUE -1
 #define FALSE 0
 #define E_V_NOTADDR 1
+#define E_V_BADCODE 6
 #define E_V_STK_UNDERFLOW   7
 #define E_V_QUIT  8
+#define E_V_DBL_OVERFLOW  21
 
 #define byte unsigned char
 
@@ -44,12 +46,23 @@ extern int* BottomOfReturnStack;
 extern byte* BottomOfTypeStack;
 extern byte* BottomOfReturnTypeStack;
 
+/* Provided by vm32.asm */
 extern int Base;
 extern int State;
 extern char* pTIB;
+extern int NumberCount;
 extern int JumpTable[];
-
+extern char WordBuf[];
+extern char TIB[];
+extern char NumberBuf[];
 int L_dnegate();
+int L_dplus();
+int L_dminus();
+int L_udmstar();
+int L_utmslash();
+int L_quit();
+int L_abort();
+int vm(byte*);
 
 // struct timeval ForthStartTime;
 unsigned long int ForthStartTime;
@@ -443,48 +456,195 @@ Note: strtoul() behavior is different between gcc and dmc compilers.
 }
 /*---------------------------------------------------------*/
 
+int C_bracketsharp()
+{
+  /* stack: ( -- | initialize for number conversion ) */
+
+  NumberCount = 0;
+  NumberBuf[255] = 0;
+  return 0;
+}
+
+
+int C_sharp()
+{
+  /* stack: ( ud1 -- ud2 | convert one digit of ud1 ) */
+
+  unsigned int u1, u2, rem;
+  char ch;
+
+  *GlobalSp = *(GlobalSp+2); --GlobalSp;
+  *GlobalSp = *(GlobalSp+2); --GlobalSp;  /* 2dup */
+  *GlobalTp = *(GlobalTp+2); --GlobalTp;
+  *GlobalTp = *(GlobalTp+2); --GlobalTp;  /*  "  */
+  TOS = 0; /* pad to triple length */
+  DEC_DSP
+  DEC_DTSP
+  TOS = Base;
+  DEC_DSP
+  DEC_DTSP
+
+  L_utmslash();
+  u1 = *(GlobalSp + 1);  /* quotient */
+  u2 = *(GlobalSp + 2);
+
+  /* quotient is on the stack; we need the remainder */
+
+  TOS = Base;
+  DEC_DSP
+  DEC_DTSP
+  L_udmstar();
+  DROP
+
+  L_dminus();
+  rem = *(GlobalSp + 2);  /* get the remainder */
+
+  *(GlobalSp + 1) = u1;   /* replace rem with quotient on the stack */
+  *(GlobalSp + 2) = u2;
+  ch = (rem < 10) ? (rem + 48) : (rem + 55);
+  ++NumberCount;
+  NumberBuf[255 - NumberCount] = ch;
+
+  return 0;
+}
+
+int C_sharps()
+{
+  /* stack: ( ud -- 0 0 | finish converting all digits of ud ) */
+
+  unsigned int u1=1, u2=0;
+
+  while (u1 | u2)
+    {
+      C_sharp();
+      u1 = *(GlobalSp + 1);
+      u2 = *(GlobalSp + 2);
+    }
+  return 0;
+}
+
+
+int C_hold()
+{
+  /* stack: ( n -- | insert character into number string )  */
+  DROP
+  char ch = TOS;
+  ++NumberCount;
+  NumberBuf[255-NumberCount] = ch;
+  return 0;
+}
+
+
+int C_sign()
+{
+  /* stack: ( n -- | insert sign into number string if n < 0 ) */
+  DROP
+  int n = TOS;
+  if (n < 0)
+    {
+      ++NumberCount;
+      NumberBuf[255-NumberCount] = '-';
+    }
+  return 0;
+}
+
+int C_sharpbracket()
+{
+  /* stack: ( 0 0 -- | complete number conversion ) */
+
+  DROP
+  DROP
+  PUSH_ADDR( (int) (NumberBuf + 255 - NumberCount) )
+  PUSH_IVAL(NumberCount)
+  return 0;
+}
+/*--------------------------------------------------------------*/
+
+int C_tonumber ()
+{
+  /* stack: ( ud1 a1 u1 -- ud2 a2 u2 | translate characters into ud number ) */
+
+  unsigned i, ulen, uc;
+  int c;
+  char *cp;
+  ulen = (unsigned) *(GlobalSp + 1);
+  if (ulen == 0) return 0;
+  uc = ulen;
+  DROP
+  DROP
+  CHK_ADDR
+  cp = (char*) TOS;
+  for (i = 0; i < ulen; i++) {
+        c = (int) *cp;
+        if (!isBaseDigit(c)) break;
+        if (c > '9') {
+          c &= 223;
+          c -= 'A';
+          c += 10;
+        }
+        else c -= '0';
+        TOS = Base;
+        DEC_DSP
+        DEC_DTSP
+        L_udmstar();
+        DROP
+        if (TOS) return E_V_DBL_OVERFLOW;
+        TOS = c;
+        DEC_DSP
+        TOS = 0;
+        DEC_DSP
+        DEC_DTSP
+        DEC_DTSP
+        L_dplus();
+        --uc; ++cp;
+  }
+
+  TOS = (int) cp;
+  DEC_DSP
+  TOS = uc;
+  DEC_DSP
+  DEC_DTSP;
+  DEC_DTSP;
+
+  return 0;
+}
+/*-----------------------------------------------------------*/
+
 int C_numberquery ()
 {
-  /* stack: ( a -- d b | translate characters into number using current base ) */
+  /* stack: ( ^str -- d b | translate characters into number using current base ) */
 
-  char *token, *pStr, *endp;
-  int b, sign;
-  int n;
+  char *pStr;
+  int b, sign, nc;
 
-  ++GlobalSp; ++GlobalTp;
-  if (GlobalSp > BottomOfStack) return 7; /* stack underflow */
-  if (*GlobalTp != OP_ADDR) return 1;     /* VM error: not an address */
-  token = *((char**)GlobalSp);
-  ++token;
-  pStr = token;
-  n = 0;
-  sign = FALSE;
   b = FALSE;
+  sign = FALSE;
 
-  if ((*pStr == '-') || isdigit(*pStr) || (isalpha(*pStr) && (Base > 10)
-					   && ((*pStr - 55) < Base)))
-    {
-      if (*pStr == '-') {sign = TRUE;}
-      ++pStr;
-      while (isdigit(*pStr) || (isalpha(*pStr) && (Base > 10) &&
-				((*pStr - 55) < Base)))	    
-	{
-	  ++pStr;
-	}
-      if (*pStr == 0)
-        {
-	  n = strtol(token, &endp, Base);
-	  b = TRUE;
-        }
+  DROP
+  if (GlobalSp > BottomOfStack) return E_V_STK_UNDERFLOW;
+  CHK_ADDR
+  pStr = *((char**)GlobalSp);
+  PUSH_IVAL(0)
+  PUSH_IVAL(0)
+  nc = *pStr;
+  ++pStr;
 
-    }
+  if (*pStr == '-') {
+    sign = TRUE; ++pStr; --nc;
+  }
+  if (nc > 0) {
+        PUSH_ADDR((int) pStr)
+        PUSH_IVAL(nc)
+        C_tonumber();
+        DROP
+        b = TOS;
+        DROP
+        b = (b == 0) ? TRUE : FALSE ;
+  }
 
-  *GlobalSp-- = n;
-  *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = sign;
-  *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = b;
-  *GlobalTp-- = OP_IVAL;  
+  if (sign) L_dnegate();
+
+  PUSH_IVAL(b)
   return 0;
 }
 /*----------------------------------------------------------*/
@@ -506,8 +666,6 @@ int C_system ()
   nc = *cp;
   strncpy (temp_str, cp+1, nc);
   temp_str[nc] = 0;
-  // nr = WinExec(temp_str, SW_SHOW);
-  // ec = (nr > 31) ? 0 : -1;    /* WinExec return code > 31 means no error */
 
   ZeroMemory(&si, sizeof(si));
   si.cb = sizeof(si);

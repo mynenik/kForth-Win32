@@ -437,98 +437,6 @@ int CPP_dotparen()
 }
 //---------------------------------------------------------------
 
-int CPP_bracketsharp()
-{
-  // stack: ( -- | initialize for number conversion )
-
-  NumberCount = 0;
-  NumberBuf[255] = 0;
-  return 0;
-}
-//----------------------------------------------------------------
-
-int CPP_sharp()
-{
-  // stack: ( ud1 -- ud2 | convert one digit of ud1 )
-
-  unsigned int u1, u2, rem;
-  char ch;
-
-  L_2dup();
-  *GlobalSp-- = 1; --GlobalTp;
-  *GlobalSp-- = Base; --GlobalTp;
-  L_mstarslash();
-  u1 = *(GlobalSp + 1);  // quotient
-  u2 = *(GlobalSp + 2);
-  // quotient is on the stack; we need the remainder
-  *GlobalSp-- = Base; --GlobalTp;
-  *GlobalSp-- = 1; --GlobalTp;
-  L_mstarslash();
-  L_dminus();
-  rem = *(GlobalSp + 2);  // get the remainder
-  *(GlobalSp + 1) = u1;   // replace rem with quotient on the stack
-  *(GlobalSp + 2) = u2;
-  ch = (rem < 10) ? (rem + 48) : (rem + 55);
-  ++NumberCount;
-  NumberBuf[255 - NumberCount] = ch;
-
-  return 0;
-}
-//----------------------------------------------------------------
-
-int CPP_sharps()
-{
-  // stack: ( ud -- 0 0 | finish converting all digits of ud )
-
-  unsigned int u1, u2;
-  u1 = 1; u2 = 0;
-
-  while (u1 | u2)
-    {
-      CPP_sharp();
-      u1 = *(GlobalSp + 1);
-      u2 = *(GlobalSp + 2);
-    }
-  return 0;
-}
-//----------------------------------------------------------------
-
-int CPP_hold()
-{
-  // stack: ( n -- | insert character into number string )
-  char ch = *(++GlobalSp); ++GlobalTp;
-  ++NumberCount;
-  NumberBuf[255-NumberCount] = ch;
-  return 0;
-}
-//----------------------------------------------------------------
-
-int CPP_sign()
-{
-  // stack: ( n -- | insert sign into number string if n < 0 )
-  int n = *(++GlobalSp); ++GlobalTp;
-  if (n < 0)
-    {
-      ++NumberCount;
-      NumberBuf[255-NumberCount] = '-';
-    }
-  return 0;
-}
-//----------------------------------------------------------------
-
-int CPP_sharpbracket()
-{
-  // stack: ( 0 0 -- | complete number conversion )
-
-  L_2drop();
-  *GlobalSp-- = (int) (NumberBuf + 255 - NumberCount);
-  *GlobalTp-- = OP_ADDR;
-  *GlobalSp-- = NumberCount;
-  *GlobalTp-- = OP_IVAL;
-  return 0;
-}
-//----------------------------------------------------------------
-
 int CPP_dot ()
 {
   // stack: ( n -- | print n in current base )
@@ -682,9 +590,9 @@ int CPP_uddot ()
     }
   else
     {
-      CPP_bracketsharp();
-      CPP_sharps();
-      CPP_sharpbracket();
+      C_bracketsharp();
+      C_sharps();
+      C_sharpbracket();
       CPP_type();
       *pOutStream << ' ';
       pOutStream->flush();

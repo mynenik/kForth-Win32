@@ -69,13 +69,13 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _C_close, _C_read, _C_write, _C_ioctl ; 12 -- 15
           dd L_usleep, L_ms, _C_msfetch, L_nop     ; 16 -- 19
           dd L_fill, L_cmove, L_cmovefrom, _CPP_dotparen  ; 20 -- 23
-          dd _CPP_bracketsharp, _CPP_tofile, _CPP_console, _CPP_sharpbracket   ; 24 -- 27
-          dd _CPP_sharps, _CPP_squote, _CPP_cr, L_bl      ; 28 -- 31
-          dd _CPP_spaces, L_store, _CPP_cquote, _CPP_sharp ; 32 -- 35
-          dd _CPP_sign, L_mod, L_and, _CPP_tick      ; 36 -- 39
-          dd _CPP_lparen, _CPP_hold, L_mul, L_add        ; 40 -- 43
+          dd _C_bracketsharp, _CPP_tofile, _CPP_console, _C_sharpbracket   ; 24 -- 27
+          dd _C_sharps, _CPP_squote, _CPP_cr, L_bl      ; 28 -- 31
+          dd _CPP_spaces, L_store, _CPP_cquote, _C_sharp ; 32 -- 35
+          dd _C_sign, L_mod, L_and, _CPP_tick      ; 36 -- 39
+          dd _CPP_lparen, _C_hold, L_mul, L_add    ; 40 -- 43
           dd L_nop, L_sub, _CPP_dot, L_div     ; 44 -- 47
-          dd _L_dabs, L_dnegate, L_umstar, L_umslashmod   ; 48 -- 51
+          dd _L_dabs, _L_dnegate, L_umstar, L_umslashmod   ; 48 -- 51
           dd L_mstar, L_mplus, L_mslash, _L_mstarslash ; 52 -- 55
           dd L_fmslashmod, L_smslashrem, L_nop, L_nop        ; 56 -- 59
           dd L_lt, L_eq, L_gt, L_question      ; 60 -- 63
@@ -102,7 +102,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_dlt, L_dzeroeq, L_deq, L_twopush  ; 144 -- 147
           dd L_twopop, L_tworfetch, L_stod, L_stof   ; 148 -- 151
           dd L_dtof, L_froundtos, L_ftod, L_degtorad ; 152 -- 155
-          dd L_radtodeg, L_dplus, _L_dminus, L_dult  ; 156 -- 159
+          dd L_radtodeg, _L_dplus, _L_dminus, L_dult ; 156 -- 159
           dd L_inc, L_dec, L_abs, L_neg        ; 160 -- 163
           dd L_min, L_max, L_twostar, L_twodiv ; 164 -- 167
           dd L_twoplus, L_twominus, L_cfetch, L_cstore ; 168 -- 171
@@ -129,9 +129,10 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_repeat, _CPP_until, _CPP_again, _CPP_bye ; 252 -- 255
 _DATA ENDS
 
-public _L_depth, _L_abort, _L_quit, _L_ret, _L_dabs
-public _L_2dup, _L_2drop, _L_dminus, _L_mstarslash
-public _L_initfpu
+public _L_initfpu, _L_depth, _L_quit, _L_abort, _L_ret
+public _L_dabs, _L_dplus, _L_dminus, _L_dnegate
+public _L_mstarslash, _L_udmstar, _L_utmslash
+public _L_2dup, _L_2drop
 
 public _vm
 
@@ -145,6 +146,8 @@ INC2_DSP MACRO  add ebx, 2*WSIZE    #EM
 INC_DTSP MACRO  inc _GlobalTp       #EM
 DEC_DTSP MACRO  dec _GlobalTp       #EM
 INC2_DTSP MACRO add _GlobalTp, 2    #EM
+_NOT     MACRO  not [ebx + WSIZE]   #EM
+
 
 STD_IVAL MACRO
 	mov edx, _GlobalTp
@@ -221,6 +224,82 @@ _OVER MACRO
         mov B[ebx], al
         dec _GlobalTp
         xor eax, eax
+#EM
+
+; use algorithm from DNW's vm-osxppc.s
+_ABS MACRO
+	LDSP
+	INC_DSP
+	mov ecx, [ebx]
+	xor eax, eax
+	cmp ecx, eax
+	setl al
+	neg eax
+	mov edx, eax
+	xor edx, ecx
+	sub edx, eax
+	mov [ebx], edx
+	xor eax, eax
+#EM
+
+STOD MACRO
+	LDSP
+	mov ecx, WSIZE
+	mov eax, [ebx + WSIZE]
+	cdq
+	mov [ebx], edx
+	sub ebx, ecx
+	STSP
+	STD_IVAL
+	xor eax, eax
+#EM
+
+DNEGATE MACRO
+	LDSP
+	INC_DSP
+	mov ecx, ebx
+	INC_DSP
+	mov eax, [ebx]
+	not eax
+	clc
+	add eax, 1
+	mov [ebx], eax
+	mov ebx, ecx
+	mov eax, [ebx]
+	not eax
+	adc eax, 0
+	mov [ebx], eax
+	xor eax, eax
+#EM
+
+DPLUS MACRO
+	LDSP
+	INC2_DSP
+	mov eax, [ebx]
+	clc
+	add eax, [ebx + 2*WSIZE]
+	mov [ebx + 2*WSIZE], eax
+	mov eax, [ebx + WSIZE]
+	adc eax, [ebx - WSIZE]
+	mov [ebx + WSIZE], eax
+	STSP
+	INC2_DTSP
+	xor eax, eax
+#EM
+
+DMINUS MACRO
+	LDSP
+	INC2_DSP
+	mov eax, [ebx + 2*WSIZE]
+	clc
+	sub eax, [ebx]
+	mov [ebx + 2*WSIZE], eax
+	mov eax, [ebx + WSIZE]
+	sbb eax, [ebx - WSIZE]
+	mov [ebx + WSIZE], eax
+	STSP
+	INC2_DTSP
+	xor eax, eax
 #EM
 
 
@@ -959,6 +1038,7 @@ jz1:    mov ecx, ebp
 	NEXT
 L_jnz:                      ; not implemented
         ret
+
 L_jmp:
 	mov ecx, ebp
 	inc ecx
@@ -968,6 +1048,7 @@ L_jmp:
 	mov ebp, ecx        ; set instruction ptr
 	xor eax, eax
 	NEXT
+
 L_calladdr:
 	inc ebp
 	mov ecx, ebp ; address to execute (intrinsic Forth word or other)
@@ -976,6 +1057,7 @@ L_calladdr:
 	call [ecx]   ; <== fixme ==
 	mov ebp, _GlobalIp
 	ret
+
 L_count:
         mov ebx, _GlobalTp
         mov al, B[ebx + 1]
@@ -993,6 +1075,7 @@ L_count:
         sub _GlobalSp, WSIZE
         xor eax, eax
         ret
+
 L_ival:
 	LDSP
 	mov ecx, ebp
@@ -1006,6 +1089,7 @@ L_ival:
 	STD_IVAL
 	xor eax, eax
 	NEXT
+
 L_addr:
 	LDSP
 	mov ecx, ebp
@@ -1019,6 +1103,7 @@ L_addr:
 	STD_ADDR
 	xor eax, eax
 	NEXT
+
 L_fval:
         mov ebx, ebp
         inc ebx
@@ -1040,6 +1125,7 @@ L_fval:
 	mov _GlobalTp, ebx
 	xor eax, eax	  
         NEXT
+
 L_and:
 	  mov ebx, _GlobalSp
 	  add ebx, WSIZE
@@ -1057,6 +1143,7 @@ L_and:
 	  mov B[ebx+1], OP_IVAL
 	  xor eax, eax
         ret
+
 L_or:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1070,6 +1157,7 @@ L_or:
         mov B[ebx + 1], OP_IVAL
         xor eax, eax
         ret
+
 L_not:
         mov ebx, _GlobalSp
         mov eax, [ebx + WSIZE]
@@ -1077,6 +1165,7 @@ L_not:
         mov [ebx + WSIZE], eax
         xor eax, eax
         ret
+
 L_xor:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1090,6 +1179,7 @@ L_xor:
         mov B[ebx + 1], OP_IVAL
         xor eax, eax
         ret
+
 L_lshift:
         LDSP
         _DROP
@@ -1099,6 +1189,7 @@ L_lshift:
 	mov [ebx + WSIZE], eax
 	xor eax, eax
         NEXT
+
 L_rshift:
         LDSP
 	_DROP
@@ -1108,6 +1199,7 @@ L_rshift:
 	mov [ebx + WSIZE], eax
 	xor eax, eax
 	NEXT
+
 L_eq:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1125,10 +1217,12 @@ eq3:    mov ebx, _GlobalTp
         mov B[ebx + 1], OP_IVAL
         xor eax, eax
         ret
+
 L_ne:
         call L_eq
         call L_not
         ret
+
 L_ult:
         mov eax, WSIZE
         add _GlobalSp, WSIZE
@@ -1140,6 +1234,7 @@ L_ult:
         jae eq2
         jmp eq1
         ret
+
 L_ugt:
         mov eax, WSIZE
         add _GlobalSp, eax
@@ -1151,6 +1246,7 @@ L_ugt:
         jbe eq2
         jmp eq1
         ret
+
 L_lt:
 	  mov ebx, _GlobalTp
 	  inc ebx
@@ -1172,6 +1268,7 @@ lt1:
 	  mov D[ebx], 0
 	  xor eax, eax
 	  ret
+
 L_gt:
 	  mov ebx, _GlobalTp
 	  inc ebx
@@ -1193,6 +1290,7 @@ gt1:
 	  mov D[ebx], 0
 	  xor eax, eax
 	  ret
+
 L_le:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1202,6 +1300,7 @@ L_le:
         cmp ebx, eax
         jg eq2
         jmp eq1
+
 L_ge:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1211,6 +1310,7 @@ L_ge:
         cmp ebx, eax
         jl eq2
         jmp eq1
+
 L_zerolt:
         mov ebx, _GlobalSp
         mov eax, [ebx + WSIZE]
@@ -1226,6 +1326,7 @@ zeroltexit:
         mov B[ebx + 1], OP_IVAL
         xor eax, eax
         ret
+
 L_zeroeq:
         mov ebx, _GlobalSp
         mov eax, [ebx + WSIZE]
@@ -1238,12 +1339,14 @@ L_zerone:
         cmp eax, 0
         je zerolt1
         jmp zerolt2
+
 L_zerogt:
         mov ebx, _GlobalSp
         mov eax, [ebx + WSIZE]
         cmp eax, 0
         jg zerolt2
         jmp zerolt1
+
 L_deq:
 	  mov ebx, _GlobalTp
 	  add ebx, 4
@@ -1271,6 +1374,7 @@ L_deq:
 deq1:	  mov D[ebx], -1
 	  xor eax, eax	
 	  ret
+
 L_dzeroeq:
 	  mov ebx, _GlobalTp
 	  add ebx, 2
@@ -1288,6 +1392,7 @@ L_dzeroeq:
 	  mov D[ebx], 0
 	  xor eax, eax
 	  ret
+
 L_dlt:
 	  call _L_dminus
 	  mov ebx, _GlobalTp
@@ -1305,6 +1410,7 @@ L_dlt:
 	  mov D[ebx], 0
 	  xor eax, eax	
 	  ret
+
 L_dult: ; b = (d1.hi u< d2.hi) OR ((d1.hi = d2.hi) AND (d1.lo u< d2.lo))
         LDSP
         mov ecx, WSIZE
@@ -1334,6 +1440,7 @@ L_dult: ; b = (d1.hi u< d2.hi) OR ((d1.hi = d2.hi) AND (d1.lo u< d2.lo))
         mov _GlobalTp, eax
         xor eax, eax
         ret
+
 L_querydup:
         mov ebx, _GlobalSp
         mov eax, [ebx + WSIZE]
@@ -1348,20 +1455,25 @@ L_querydup:
         xor eax, eax
 L_querydupexit:
         ret
+
 L_drop:
         LDSP
         _DROP
         NEXT
+
 L_dup:
 	LDSP
 	_DUP
 	NEXT
+
 L_swap:
 	_SWAP
 	NEXT
+
 L_over:
 	_OVER
 	NEXT
+
 L_rot:
         push ebp
         LDSP
@@ -1389,6 +1501,7 @@ L_rot:
 	xor eax, eax
 	pop ebp
 	NEXT
+
 L_minusrot:
         LDSP
         mov eax, [ebx + WSIZE]
@@ -1411,15 +1524,18 @@ L_minusrot:
         mov B[ebx + 2], al
         xor eax, eax
         NEXT
+
 L_nip:
         _SWAP
         add _GlobalSp, WSIZE
         INC_DTSP
         NEXT
+
 L_tuck:
         _SWAP
         _OVER
         NEXT
+
 L_pick:
         LDSP
         mov eax, [ebx + WSIZE]
@@ -1443,6 +1559,7 @@ L_pick:
         mov [ebx + WSIZE], eax
         xor eax, eax
         ret
+
 L_roll:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1494,6 +1611,7 @@ rolltloop:
         loop rolltloop
         xor eax, eax
         ret
+
 _L_depth:
         mov ebx, _GlobalSp
         mov eax, _BottomOfStack
@@ -1508,10 +1626,12 @@ _L_depth:
         dec _GlobalTp
         xor eax, eax
         ret
+
 _L_2drop:
         add _GlobalSp, 2*WSIZE
         add _GlobalTp, 2
         ret
+
 _L_2dup:
         mov ebx, _GlobalSp
 	  mov ecx, ebx
@@ -1534,6 +1654,7 @@ _L_2dup:
 	  mov _GlobalTp, ebx
 	  xor eax, eax
 	  ret
+
 L_2swap:
 	  mov ebx, _GlobalSp
 	  add ebx, WSIZE
@@ -1557,6 +1678,7 @@ L_2swap:
 	  mov W[ebx], ax
 	  xor eax, eax
 	  ret
+
 L_2over:
 	  mov ebx, _GlobalSp
 	  mov ecx, ebx
@@ -1581,6 +1703,7 @@ L_2over:
 	  mov _GlobalTp, ebx
 	  xor eax, eax
 	  ret
+
 L_2rot:
 	  mov ebx, _GlobalSp
 	  add ebx, WSIZE
@@ -1612,6 +1735,7 @@ L_2rot:
 	  mov W[ebx], ax
 	  xor eax, eax
 	  ret
+
 L_question:
         call L_fetch
         cmp eax, 0
@@ -1619,6 +1743,7 @@ L_question:
         call _CPP_dot
 questionexit:
         ret
+
 L_fetch:
         mov edx, _GlobalSp
         mov ebx, _GlobalTp
@@ -1636,6 +1761,7 @@ L_fetch:
 fetcherror:
         mov eax, E_NOT_ADDR
         ret
+
 L_store:
         mov ebx, _GlobalTp
         inc ebx
@@ -1653,6 +1779,7 @@ L_store:
         INC2_DTSP
         xor eax, eax
         ret
+
 L_afetch:
 	  mov edx, _GlobalSp
 	  mov ebx, _GlobalTp
@@ -1667,38 +1794,41 @@ L_afetch:
 	  mov [edx], eax
 	  xor eax, eax
         ret
+
 L_cfetch:
         mov ebx, _GlobalTp
-	  inc ebx
-	  mov al, B[ebx]
+	inc ebx
+	mov al, B[ebx]
         cmp al, OP_ADDR
         jnz fetcherror
         mov B[ebx], OP_IVAL
         xor eax, eax
         mov ebx, _GlobalSp
-	  add ebx, WSIZE
-	  mov ecx, [ebx]
-	  mov al, B[ecx]
-	  mov [ebx], eax
-	  xor eax, eax
+	add ebx, WSIZE
+	mov ecx, [ebx]
+	mov al, B[ecx]
+	mov [ebx], eax
+	xor eax, eax
         ret
+
 L_cstore:
-	  mov edx, _GlobalTp
-	  inc edx
-	  mov al, B[edx]
-	  cmp al, OP_ADDR
-	  jnz fetcherror
-	  mov ebx, _GlobalSp
-	  add ebx, WSIZE
-	  mov ecx, [ebx]	; address to store
-	  add ebx, WSIZE
-	  mov eax, [ebx]	; value to store
-	  mov B[ecx], al
-	  mov _GlobalSp, ebx
-	  inc edx
-	  mov _GlobalTp, edx
-	  xor eax, eax
-	  ret
+	mov edx, _GlobalTp
+	inc edx
+	mov al, B[edx]
+	cmp al, OP_ADDR
+	jnz fetcherror
+	mov ebx, _GlobalSp
+	add ebx, WSIZE
+	mov ecx, [ebx]	; address to store
+	add ebx, WSIZE
+	mov eax, [ebx]	; value to store
+	mov B[ecx], al
+	mov _GlobalSp, ebx
+	inc edx
+	mov _GlobalTp, edx
+	xor eax, eax
+	ret
+
 L_wfetch:
         mov ebx, _GlobalTp
         mov al, [ebx + 1]
@@ -1713,6 +1843,7 @@ L_wfetch:
         mov [ebx + WSIZE], eax
         xor eax, eax
         ret
+
 L_wstore:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1731,6 +1862,7 @@ L_wstore:
         inc _GlobalTp
         xor eax, eax
         ret
+
 L_sffetch:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1752,6 +1884,7 @@ L_sffetch:
         sub _GlobalSp, WSIZE
         xor eax, eax
         ret
+
 L_sfstore:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -1769,91 +1902,87 @@ L_sfstore:
         add _GlobalTp, 2
         xor eax, eax
         ret
+
 L_dffetch:
         mov ebx, _GlobalTp
         inc ebx
         mov al, [ebx]
         cmp al, OP_ADDR
         jnz fetcherror
-	  mov B[ebx], OP_IVAL
-	  dec ebx
-	  mov B[ebx], OP_IVAL
-	  dec ebx
-	  mov _GlobalTp, ebx
+	mov B[ebx], OP_IVAL
+	dec ebx
+	mov B[ebx], OP_IVAL
+	dec ebx
+	mov _GlobalTp, ebx
         mov ebx, _GlobalSp
-	  mov edx, ebx
+	mov edx, ebx
         add ebx, WSIZE
         mov ecx, [ebx]      ; address to fetch from in ecx
-	  mov eax, [ecx]
-	  mov [edx], eax
-	  add ecx, WSIZE
-	  mov eax, [ecx]
-	  mov [ebx], eax
-	  sub edx, WSIZE
-	  mov _GlobalSp, edx
-	  xor eax, eax
-	  ret
+	mov eax, [ecx]
+	mov [edx], eax
+	add ecx, WSIZE
+	mov eax, [ecx]
+	mov [ebx], eax
+	sub edx, WSIZE
+	mov _GlobalSp, edx
+	xor eax, eax
+	ret
+
 L_dfstore:
         mov ebx, _GlobalTp
         inc ebx
         mov al, [ebx]
         cmp al, OP_ADDR
         jnz fetcherror
-	  add ebx, 2
-	  mov _GlobalTp, ebx
+	add ebx, 2
+	mov _GlobalTp, ebx
         mov ebx, _GlobalSp
-	  mov edx, WSIZE
+	mov edx, WSIZE
         add ebx, edx
-	  mov eax, ebx
-	  mov ebx, [ebx]	; address to store
-	  add eax, edx
-	  mov ecx, [eax]
-	  mov [ebx], ecx
-	  add eax, edx
-	  add ebx, edx
-	  mov ecx, [eax]
-	  mov [ebx], ecx
-	  mov _GlobalSp, eax
-	  xor eax, eax
-	  ret
+	mov eax, ebx
+	mov ebx, [ebx]	; address to store
+	add eax, edx
+	mov ecx, [eax]
+	mov [ebx], ecx
+	add eax, edx
+	add ebx, edx
+	mov ecx, [eax]
+	mov [ebx], ecx
+	mov _GlobalSp, eax
+	xor eax, eax
+	ret
+
 L_inc:
-        mov ebx, _GlobalSp
+        LDSP
         inc D[ebx + WSIZE]
-        ret
+        NEXT
+
 L_dec:
-        mov ebx, _GlobalSp
+        LDSP
         dec D[ebx + WSIZE]
-        ret
+        NEXT
+
 L_twoplus:
-        mov ebx, _GlobalSp
+        LDSP
         inc D[ebx + WSIZE]
         inc D[ebx + WSIZE]
-        ret
+        NEXT
+
 L_twominus:
-        mov ebx, _GlobalSp
+        LDSP
         dec D[ebx + WSIZE]
         dec D[ebx + WSIZE]
-        ret
+        NEXT
+
 L_abs:
-        mov ebx, _GlobalSp
-        add ebx, WSIZE
-        mov eax, [ebx]
-        cmp eax, 0
-        jl abs1
-        xor eax, eax
-        ret
-abs1:   neg eax
-        mov [ebx], eax
-        xor eax, eax
-        ret
+	_ABS
+	NEXT
+
 L_neg:
-        mov ebx, _GlobalSp
-        add ebx, WSIZE
-        mov eax, [ebx]
-        neg eax
-        mov [ebx], eax
-        xor eax, eax
-        ret
+        LDSP
+        neg D[ebx + WSIZE]
+        NEXT
+
 L_max:
         add _GlobalSp, WSIZE
         mov ebx, _GlobalSp
@@ -1892,21 +2021,24 @@ L_dmax:
 	ret
 L_dmin:
 	ret
+
 L_twostar:
-        mov ebx, _GlobalSp
+        LDSP
         sal D[ebx + WSIZE], 1
-        ret
+        NEXT
+
 L_twodiv:
-        mov ebx, _GlobalSp
+        LDSP
         sar D[ebx + WSIZE], 1
-        ret
+        NEXT
+
 L_add:
+	LDSP
         mov eax, WSIZE
-        mov ebx, _GlobalSp
         add ebx, eax
         mov eax, [ebx]
         add [ebx + WSIZE], eax
-        mov _GlobalSp, ebx
+        STSP
         mov ebx, _GlobalTp
         inc ebx
         mov _GlobalTp, ebx
@@ -1915,7 +2047,8 @@ L_add:
         inc ebx
         mov B[ebx], al
         xor eax, eax
-        ret
+        NEXT
+
 L_sub:
 	LDSP
 	_DROP            ; result will have type of first operand
@@ -1923,18 +2056,20 @@ L_sub:
 	sub [ebx + WSIZE], eax
 	xor eax, eax
 	NEXT
+
 L_mul:
+	LDSP
         mov ecx, WSIZE
-        mov ebx, _GlobalSp
         add ebx, ecx
-        mov _GlobalSp, ebx
+        STSP
         mov eax, [ebx]
         add ebx, ecx
         imul D[ebx]
         mov [ebx], eax
-        inc _GlobalTp
+        INC_DTSP
         xor eax, eax
-        ret
+        NEXT
+
 L_div:
         add _GlobalSp, WSIZE
         INC_DTSP
@@ -1950,12 +2085,14 @@ L_div:
         xor eax, eax
 divexit:
         ret
+
 L_mod:
         call L_div
 	cmp eax, 0
 	jnz divexit
         mov [ebx], edx
         NEXT
+
 L_slashmod:
         call L_div
         cmp eax, 0
@@ -1967,6 +2104,7 @@ L_slashmod:
         DEC_DTSP
         _SWAP
         NEXT
+
 L_starslash:
         mov eax, WSIZE
         sal eax, 1
@@ -1980,6 +2118,7 @@ L_starslash:
         inc _GlobalTp
         xor eax, eax
         ret
+
 L_starslashmod:
         call L_starslash
         mov [ebx], edx
@@ -1988,12 +2127,13 @@ L_starslashmod:
         DEC_DTSP
         _SWAP
         ret
+
 L_plusstore:
         mov ebx, _GlobalTp
         mov al, [ebx + 1]
         cmp al, OP_ADDR
-        jnz fetcherror
-        mov ebx, _GlobalSp
+        jnz E_not_addr
+        LDSP
         push ebx
         push ebx
         push ebx
@@ -2009,231 +2149,188 @@ L_plusstore:
         mov eax, WSIZE
         sal eax, 1
         add ebx, eax
-        mov _GlobalSp, ebx
-        inc _GlobalTp
-        inc _GlobalTp
+        STSP
+        INC2_DTSP
         xor eax, eax
-        ret
+        NEXT
+
 _L_dabs:
-	  mov ebx, _GlobalSp
-	  add ebx, WSIZE
-	  mov ecx, [ebx]
-	  mov eax, ecx
-	  cmp eax, 0
-	  jl dabs_go
-	  xor eax, eax
-	  ret
+	LDSP
+	INC_DSP
+	mov ecx, [ebx]
+	mov eax, ecx
+	cmp eax, 0
+	jl dabs_go
+	xor eax, eax
+	ret
 dabs_go:
-	  add ebx, WSIZE
-	  mov eax, [ebx]
-	  clc
-	  sub eax, 1
-	  not eax
-	  mov [ebx], eax
-	  mov eax, ecx
-	  sbb eax, 0
-	  not eax
-	  mov [ebx-WSIZE], eax
-	  xor eax, eax
-	  ret
-L_dnegate:
-	  mov ebx, _GlobalSp
-	  add ebx, WSIZE
-	  mov ecx, ebx
-	  add ebx, WSIZE
-	  mov eax, [ebx]
-	  not eax
-	  clc
-	  add eax, 1
-	  mov [ebx], eax
-	  mov ebx, ecx
-	  mov eax, [ebx]
-	  not eax
-	  adc eax, 0
-	  mov [ebx], eax
-	  xor eax, eax	
-	  ret	
-L_dplus:
-	  mov ebx, _GlobalSp
-	  add ebx, 2*WSIZE
-	  mov eax, [ebx]
-	  clc
-	  add eax, [ebx+2*WSIZE]
-	  mov [ebx+2*WSIZE], eax
-	  mov eax, [ebx+WSIZE]
-	  adc eax, [ebx-WSIZE]
-	  mov [ebx+WSIZE], eax
-	  mov _GlobalSp, ebx
-	  inc _GlobalTp
-	  inc _GlobalTp
-	  xor eax, eax
-	  ret
+	INC_DSP
+	mov eax, [ebx]
+	clc
+	sub eax, 1
+	not eax
+	mov [ebx], eax
+	mov eax, ecx
+	sbb eax, 0
+	not eax
+	mov [ebx-WSIZE], eax
+	xor eax, eax
+	ret
+
+_L_dnegate:
+	DNEGATE
+	ret
+
+_L_dplus:
+	DPLUS
+	ret
+
 _L_dminus:
-	  mov ebx, _GlobalSp
-	  add ebx, 2*WSIZE
-	  mov eax, [ebx+2*WSIZE]
-	  clc
-	  sub eax, [ebx]
-	  mov [ebx+2*WSIZE], eax
-	  mov eax, [ebx+WSIZE]
-	  sbb eax, [ebx-WSIZE]
-	  mov [ebx+WSIZE], eax
-	  mov _GlobalSp, ebx
-	  inc _GlobalTp
-	  inc _GlobalTp
-	  xor eax, eax
-	  ret
+	DMINUS
+	ret
+
 L_umstar:
+	LDSP
         mov eax, WSIZE
-        mov ebx, _GlobalSp
         add ebx, eax
         mov ecx, [ebx]
         add ebx, eax
         mov eax, ecx
         mul D[ebx]
         mov [ebx], eax
-        sub ebx, WSIZE
+        DEC_DSP
         mov [ebx], edx
         xor eax, eax
-        ret
+        NEXT
+
 L_umslashmod:
-        mov ebx, _GlobalSp
-        mov eax, WSIZE
-        add ebx, eax
-        mov _GlobalSp, ebx
-        mov ecx, [ebx]
-        add ebx, eax
-	  mov edx, 0
-	  mov eax, [ebx]
-	  div ecx
-	  cmp eax, 0
-	  jne umslashmod_ovflow
+; Divide unsigned double length by unsigned single length to
+; give unsigned single quotient and remainder. A "Divide overflow"
+; error results if the quotient doesn't fit into a single word.
+	LDSP
+	mov eax, WSIZE
+	add ebx, eax
+	STSP
+	mov ecx, [ebx]
+	cmp ecx, 0
+	jz E_div_zero
+	add ebx, eax
+	mov edx, 0
+	mov eax, [ebx]
+	div ecx
+	cmp eax, 0
+	jne E_div_overflow
         mov edx, [ebx]
-	  add ebx, WSIZE
+	INC_DSP
         mov eax, [ebx]
         div ecx
-	  jmp umslashmod_exit
-umslashmod_ovflow:
-	  add ebx, WSIZE
-	  mov edx, -1
-	  mov eax, -1
-umslashmod_exit:
         mov [ebx], edx
-        sub ebx, WSIZE
+        DEC_DSP
         mov [ebx], eax
-        inc _GlobalTp
+        INC_DTSP
         xor eax, eax
-        ret
+        NEXT
+
 L_mstar:
+	LDSP
         mov eax, WSIZE
-        mov ebx, _GlobalSp
         add ebx, eax
         mov ecx, [ebx]
         add ebx, eax
         mov eax, ecx
         imul D[ebx]
         mov [ebx], eax
-        sub ebx, WSIZE
+        DEC_DSP
         mov [ebx], edx
         xor eax, eax
-        ret
+        NEXT
+
 L_mplus:
-	  mov eax, WSIZE
-	  mov ebx, _GlobalSp
-	  add ebx, eax
-	  mov ecx, [ebx]
-	  mov _GlobalSp, ebx
-	  inc _GlobalTp
-	  add ebx, eax
-	  mov edx, [ebx]
-	  add ebx, eax
-	  mov eax, [ebx]
-	  clc
-	  add eax, ecx
-	  js mplus1
-	  adc edx, 0
-mplus1:
-	  mov [ebx], eax
-	  mov [ebx-WSIZE], edx
-	  xor eax, eax
-	  ret
+	STOD
+	DPLUS
+	NEXT
+
 L_mslash:
-	  mov eax, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
-	  add ebx, eax
+	LDSP
+	mov eax, WSIZE
+        INC_DTSP
+	add ebx, eax
         mov ecx, [ebx]
-	  inc _GlobalTp
-	  add ebx, eax
-	  mov _GlobalSp, ebx
+	INC_DTSP
+	add ebx, eax
+	STSP
         cmp ecx, 0
-        je mslash1
-	  add ebx, eax
+        je E_div_zero
         mov edx, [ebx]
-	  add ebx, eax
-	  mov eax, [ebx]
+	add ebx, eax
+	mov eax, [ebx]
         idiv ecx
         mov [ebx], eax
-	  xor eax, eax		
-	  ret
-mslash1:			
-        mov eax, E_DIV_ZERO
-        ret
-L_udmstar:
-	  ; multiply unsigned double and unsigned to give triple length product
-	  mov ebx, _GlobalSp
-	  add ebx, WSIZE
-	  mov ecx, [ebx]
-	  add ebx, WSIZE
-	  mov eax, [ebx]
-	  mul ecx
-	  mov [ebx-WSIZE], edx
-	  mov [ebx], eax
-	  add ebx, WSIZE
-	  mov eax, ecx
-	  mul D[ebx]
-	  mov [ebx], eax
-	  sub ebx, WSIZE
-	  mov eax, [ebx]
-	  sub ebx, WSIZE
-	  clc
-	  add eax, edx
-	  mov [ebx+WSIZE], eax
-	  ; subl $WSIZE, %ebx
-	  mov eax, [ebx]
-	  adc eax, 0
-	  mov [ebx], eax
-	  xor eax, eax 		
-	  ret
-L_utmslash:
-	; divide unsigned triple length by unsigned to give ud quotient
-	mov ebx, _GlobalSp
-	add ebx, WSIZE
+	xor eax, eax		
+	NEXT
+
+_L_udmstar:
+	; multiply unsigned double and unsigned to give triple length product
+	LDSP
+	INC_DSP
+	mov ecx, [ebx]
+	INC_DSP
+	mov eax, [ebx]
+	mul ecx
+	mov [ebx-WSIZE], edx
+	mov [ebx], eax
+	INC_DSP
+	mov eax, ecx
+	mul D[ebx]
+	mov [ebx], eax
+	DEC_DSP
+	mov eax, [ebx]
+	DEC_DSP
+	clc
+	add eax, edx
+	mov [ebx+WSIZE], eax
+	mov eax, [ebx]
+	adc eax, 0
+	mov [ebx], eax
+	xor eax, eax 		
+	ret
+
+_L_utmslash:
+	; Divide unsigned triple length by unsigned to give ud quotient.
+	; A "Divide Overflow" error results if the quotient doesn't fit
+	; into a double word 
+	LDSP
+	INC_DSP
 	mov ecx, [ebx]	; divisor in ecx
-	add ebx, WSIZE
+	cmp ecx, 0
+	jz E_div_zero
+	INC_DSP
 	mov eax, [ebx]	; ut3
 	mov edx, 0
 	div ecx		; ut3/u
+	cmp eax, 0
+	jnz E_div_overflow
+utmslash1:
 	push ebx		; keep local stack ptr
-	mov ebx, _GlobalSp
+	LDSP
 	mov [ebx-4*WSIZE], eax	; q3
 	mov [ebx-5*WSIZE], edx	; r3
 	pop ebx
-	add ebx, WSIZE
+	INC_DSP
 	mov eax, [ebx]		; ut2
 	mov edx, 0
 	div ecx			; ut2/u
 	push ebx
-	mov ebx, _GlobalSp
+	LDSP
 	mov [ebx-2*WSIZE], eax	; q2
 	mov [ebx-3*WSIZE], edx	; r2
 	pop ebx
-	add ebx, WSIZE
+	INC_DSP
 	mov eax, [ebx]		; ut1
 	mov edx, 0
 	div ecx			; ut1/u
 	push ebx
-	mov ebx, _GlobalSp
+	LDSP
 	mov [ebx], eax		; q1
 	mov [ebx-WSIZE], edx	; r1
 	mov edx, [ebx-5*WSIZE]	; r3 << 32
@@ -2251,130 +2348,146 @@ L_utmslash:
 	div ecx			; (r4 << 32)/u
 	mov [ebx-10*WSIZE], eax	; q6
 	mov [ebx-11*WSIZE], edx	; r6
+	mov edx, 0
 	mov eax, [ebx-WSIZE]	; r1
 	add eax, [ebx-9*WSIZE]	; r1 + r5
+	jnc utmslash2
+	inc edx
+utmslash2:
 	add eax, [ebx-11*WSIZE]	; r1 + r5 + r6
-	mov edx, 0
+	jnc utmslash3
+	inc edx
+utmslash3:
 	div ecx
+	mov [ebx-12*WSIZE], eax ; q7
+	mov [ebx-13*WSIZE], edx ; r7
+	mov edx, 0
 	add eax, [ebx-10*WSIZE]	; q7 + q6
+	jnc utmslash4
+	inc edx
+utmslash4:
 	add eax, [ebx-8*WSIZE]	; q7 + q6 + q5
+	jnc utmslash5
+	inc edx
+utmslash5:
 	add eax, [ebx]		; q7 + q6 + q5 + q1
+	jnc utmslash6
+	inc edx
+utmslash6:
 	pop ebx
 	mov [ebx], eax
-	sub ebx, WSIZE
+	DEC_DSP
 	push ebx
-	mov ebx, _GlobalSp
+	LDSP
 	mov eax, [ebx-2*WSIZE]	; q2
 	add eax, [ebx-6*WSIZE]	; q2 + q4
+	add eax, edx
 	pop ebx
 	mov [ebx], eax
-	sub ebx, WSIZE
-	mov _GlobalSp, ebx
-	add _GlobalTp, 2
+	DEC_DSP
+	STSP
+	INC2_DTSP
 	xor eax, eax
 	ret
+
 _L_mstarslash:
-	mov ebx, _GlobalSp
-	add ebx, WSIZE
-	add ebx, WSIZE
+	LDSP
+	INC_DSP
+	INC_DSP
 	mov eax, [ebx]
-	add ebx, WSIZE
+	INC_DSP
 	xor eax, [ebx]
 	shr eax, 31
 	push eax	; keep sign of result -- negative is nonzero
-	mov ebx, _GlobalSp
-	add ebx, WSIZE
-	mov _GlobalSp, ebx
-	inc _GlobalTp
-	call L_abs
-	mov ebx, _GlobalSp
-	add ebx, WSIZE
-	mov _GlobalSp, ebx
-	inc _GlobalTp
+	LDSP
+	INC_DSP
+	STSP
+	INC_DTSP
+	_ABS
+	LDSP
+	INC_DSP
+	STSP
+	INC_DTSP
 	call _L_dabs
-	mov ebx, _GlobalSp
-	sub ebx, WSIZE
-	mov _GlobalSp, ebx
-	dec _GlobalTp
-	call L_udmstar
-	mov ebx, _GlobalSp
-	sub ebx, WSIZE
-	mov _GlobalSp, ebx
-	dec _GlobalTp
-	call L_utmslash	
+	LDSP
+	DEC_DSP
+	STSP
+	DEC_DTSP
+	call _L_udmstar
+	LDSP
+	DEC_DSP
+	STSP
+	DEC_DTSP
+	call _L_utmslash	
 	pop eax
 	cmp eax, 0
 	jnz mstarslash_neg
 	xor eax, eax
 	ret
 mstarslash_neg:
-	call L_dnegate
+	DNEGATE
 	xor eax, eax
 	ret
+
 L_fmslashmod:
-        mov ebx, _GlobalSp
+        LDSP
         mov eax, WSIZE
         add ebx, eax
-        mov _GlobalSp, ebx
+        STSP
         mov ecx, [ebx]
+	cmp ecx, 0
+	jz E_div_zero
         add ebx, eax
         mov edx, [ebx]
         add ebx, eax
         mov eax, [ebx]
         idiv ecx
         mov [ebx], edx
-        sub ebx, WSIZE
+        DEC_DSP
         mov [ebx], eax
-	  inc _GlobalTp
-	  cmp ecx, 0
-	  jg fmslashmod2
+	INC_DTSP
+	cmp ecx, 0
+	jg fmslashmod2
         cmp edx, 0
-	  jg fmslashmod3
-	  xor eax, eax
-	  ret
+	jg fmslashmod3
+	xor eax, eax
+	NEXT
 fmslashmod2:
-	  cmp edx, 0
+	cmp edx, 0
         jge fmslashmodexit
 fmslashmod3:
         dec eax     ; floor the result
         mov [ebx], eax
-        add ebx, WSIZE
+        INC_DSP
         add [ebx], ecx
 fmslashmodexit:
         xor eax, eax
-        ret
+        NEXT
+
 L_smslashrem:
-        mov ebx, _GlobalSp
+        LDSP
         mov eax, WSIZE
         add ebx, eax
-        mov _GlobalSp, ebx
+        STSP
         mov ecx, [ebx]
+	cmp ecx, 0
+	jz E_div_zero
         add ebx, eax
         mov edx, [ebx]
         add ebx, eax
         mov eax, [ebx]
         idiv ecx
         mov [ebx], edx
-        sub ebx, WSIZE
+        DEC_DSP
         mov [ebx], eax
-        inc _GlobalTp
+        INC_DTSP
         xor eax, eax
-        ret
+        NEXT
+
 L_stod:
-        mov ebx, _GlobalSp
-        mov eax, [ebx + WSIZE]
-        push edx
-        cdq
-        mov [ebx], edx
-        pop edx
-        mov eax, WSIZE
-        sub ebx, eax
-        mov _GlobalSp, ebx
-        mov ebx, _GlobalTp
-        mov B[ebx], OP_IVAL
-        dec _GlobalTp
-        xor eax, eax
-        ret
+	STOD
+	NEXT
+
 L_stof:
         add _GlobalSp, WSIZE
         inc _GlobalTp
@@ -2391,6 +2504,7 @@ L_stof:
         FSTP Q[ebx]
         sub _GlobalSp, 2*WSIZE
         ret
+
 L_dtof:
         mov eax, WSIZE
         mov ebx, _GlobalSp
@@ -2402,6 +2516,7 @@ L_dtof:
         FSTP Q[ebx]
         xor eax, eax
         ret
+
 L_froundtos:
         add _GlobalSp, WSIZE
         mov ebx, _GlobalSp
