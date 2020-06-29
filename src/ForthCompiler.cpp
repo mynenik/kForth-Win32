@@ -325,6 +325,7 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 	  else
 	    {
 	      pTIB = ExtractName (pTIB, WordToken);
+	      if (*pTIB == ' ' || *pTIB == '\t') ++pTIB; // go past next ws char
 	      strupr(WordToken);
 
 	      if (IsForthWord(WordToken, &d))
@@ -534,7 +535,6 @@ int ForthCompiler (vector<byte>* pOpCodes, int* pLc)
 		      ecode = E_C_NOTINDEF;
 		      goto endcompile;
 		    }
-		  ++pTIB;
 		  pTIB = ExtractName (pTIB, WordToken);
 		  strcpy (s, pTIB);  // save remaining part of input line in TIB
 		  if (!strchr(WordToken, '.')) strcat(WordToken, ".4th");

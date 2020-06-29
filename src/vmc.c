@@ -550,7 +550,7 @@ int C_sign()
 
 int C_sharpbracket()
 {
-  /* stack: ( 0 0 -- | complete number conversion ) */
+  /* stack: ( ud -- a u | complete number conversion ) */
 
   DROP
   DROP
@@ -587,7 +587,7 @@ int C_tonumber ()
         DEC_DSP
         DEC_DTSP
         L_udmstar();
-        DROP
+        DROP 
         if (TOS) return E_V_DBL_OVERFLOW;
         TOS = c;
         DEC_DSP

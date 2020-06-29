@@ -73,7 +73,7 @@ extern "C" {
 
   // global pointers exported to other modules
 
-  int* GlobalSp;      // the global stack pointer
+  int* GlobalSp;   // the global stack pointer
   byte* GlobalTp;     // the global type stack pointer
   byte* GlobalIp;     // the global instruction pointer
   int* GlobalRp;      // the global return stack pointer
@@ -406,8 +406,6 @@ int CPP_lparen()
 int CPP_dotparen()
 {
   // stack: ( -- | display comment and advance pTIB past end of comment )
-
-  ++pTIB;
 
   while (TRUE)
     {
@@ -861,11 +859,9 @@ int CPP_word ()
 {
   // stack: ( n -- ^str | parse next word in input stream )
   // n is the delimiting character and ^str is a counted string.
-
-  char delim = *(++GlobalSp); ++GlobalTp;
+  DROP
+  char delim = TOS;
   char *dp = WordBuf + 1;
-
-  if (*pTIB == ' ') ++pTIB;
 
   while (*pTIB)
     {
@@ -1038,7 +1034,6 @@ int CPP_forget ()
 {
   char token[128];
 
-  ++pTIB;
   pTIB = ExtractName (pTIB, token);
   strupr(token);
 
@@ -1139,7 +1134,7 @@ int CPP_cquote ()
   // compilation stack: ( -- | compile a counted string into the string table )
   // runtime stack: ( -- ^str | place address of counted string on stack )
 
-  char* begin_string = pTIB + 1;
+  char* begin_string = pTIB ;
   char* end_string = strchr(begin_string, '"');
   if (end_string == NULL)
     {
@@ -1152,11 +1147,8 @@ int CPP_cquote ()
   strncpy(str+1, begin_string, nc);
   str[nc+1] = '\0';
   StringTable.push_back(str);
-  byte* bp = (byte*) &str;
-
   pCurrentOps->push_back(OP_ADDR);
-  for (int i = 0; i < sizeof(byte*); i++)
-    pCurrentOps->push_back(*(bp + i));
+  OpsPushInt((long int) str);
 
   return 0;
 }

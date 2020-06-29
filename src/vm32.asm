@@ -322,13 +322,15 @@ E_div_overflow:
 
 ; set kForth's default fpu settings
 _L_initfpu:
-        mov ebx, _GlobalSp
+	push ebx  ; Win32 stdcall calling convention
+        LDSP
         fnstcw offset NDPcw
         mov ecx, NDPcw
         and ch, 240
         or  ch, 2
         mov [ebx], ecx
         fldcw [ebx]
+	pop ebx
         ret
 
 _vm     proc    near
@@ -474,11 +476,13 @@ _L_ret:
 	mov eax, OP_RET		; exhausted the return stack so exit 
 	ret
 ret1:
+	push ebx  ; Win32 stdcall calling convention
 	add ecx, WSIZE
 	mov _GlobalRp, ecx
 	inc _GlobalRtp
 	mov ebx, _GlobalRtp
 	mov al, [ebx]
+	pop ebx
         cmp al, OP_ADDR
         jnz E_ret_stk_corrupt
 	mov eax, [ecx]
@@ -1613,7 +1617,8 @@ rolltloop:
         ret
 
 _L_depth:
-        mov ebx, _GlobalSp
+	push ebx  ; Win32 stdcall calling convention
+        LDSP
         mov eax, _BottomOfStack
         sub eax, ebx
         mov D[ebx], WSIZE
@@ -1625,6 +1630,7 @@ _L_depth:
         mov B[ebx], OP_IVAL
         dec _GlobalTp
         xor eax, eax
+	pop ebx
         ret
 
 _L_2drop:
@@ -1633,27 +1639,29 @@ _L_2drop:
         ret
 
 _L_2dup:
-        mov ebx, _GlobalSp
-	  mov ecx, ebx
-	  add ebx, WSIZE
-	  mov edx, [ebx]
-	  add ebx, WSIZE
-	  mov eax, [ebx]
-	  mov ebx, ecx
-	  mov [ebx], eax
-	  sub ebx, WSIZE
-	  mov [ebx], edx
-	  sub ebx, WSIZE
-	  mov _GlobalSp, ebx
-	  mov ebx, _GlobalTp
-	  inc ebx
-	  mov ax, W[ebx]
-	  sub ebx, 2
-	  mov W[ebx], ax
-	  dec ebx
-	  mov _GlobalTp, ebx
-	  xor eax, eax
-	  ret
+	push ebx  ; Win32 stdcall calling convention
+        LDSP
+	mov ecx, ebx
+	add ebx, WSIZE
+	mov edx, [ebx]
+	add ebx, WSIZE
+	mov eax, [ebx]
+	mov ebx, ecx
+	mov [ebx], eax
+	DEC_DSP
+	mov [ebx], edx
+	DEC_DSP
+	STSP
+	mov ebx, _GlobalTp
+	inc ebx
+	mov ax, W[ebx]
+	sub ebx, 2
+	mov W[ebx], ax
+	dec ebx
+	mov _GlobalTp, ebx
+	xor eax, eax
+	pop ebx
+	ret
 
 L_2swap:
 	  mov ebx, _GlobalSp
@@ -2155,6 +2163,7 @@ L_plusstore:
         NEXT
 
 _L_dabs:
+	push ebx ; Win32 stdcall calling convention
 	LDSP
 	INC_DSP
 	mov ecx, [ebx]
@@ -2162,6 +2171,7 @@ _L_dabs:
 	cmp eax, 0
 	jl dabs_go
 	xor eax, eax
+	pop ebx
 	ret
 dabs_go:
 	INC_DSP
@@ -2175,18 +2185,25 @@ dabs_go:
 	not eax
 	mov [ebx-WSIZE], eax
 	xor eax, eax
+	pop ebx
 	ret
 
 _L_dnegate:
+	push ebx  ; Win32 stdcall calling convention
 	DNEGATE
+	pop ebx
 	ret
 
 _L_dplus:
+	push ebx  ; Win32 stdcall calling convention
 	DPLUS
+	pop ebx
 	ret
 
 _L_dminus:
+	push ebx  ; Win32 stdcall calling convention
 	DMINUS
+	pop ebx
 	ret
 
 L_umstar:
@@ -2271,6 +2288,7 @@ L_mslash:
 
 _L_udmstar:
 	; multiply unsigned double and unsigned to give triple length product
+	push ebx  ; Win32 stdcall convention requires preserving ebx
 	LDSP
 	INC_DSP
 	mov ecx, [ebx]
@@ -2292,30 +2310,35 @@ _L_udmstar:
 	mov eax, [ebx]
 	adc eax, 0
 	mov [ebx], eax
-	xor eax, eax 		
+	xor eax, eax
+	pop ebx 		
 	ret
 
 _L_utmslash:
 	; Divide unsigned triple length by unsigned to give ud quotient.
 	; A "Divide Overflow" error results if the quotient doesn't fit
-	; into a double word 
+	; into a double word
+	push ebx  ; Win32 stdcall calling convention 
 	LDSP
-	INC_DSP
-	mov ecx, [ebx]	; divisor in ecx
+	mov ecx, [ebx + WSIZE]	; divisor in ecx
+	pop ebx
 	cmp ecx, 0
 	jz E_div_zero
-	INC_DSP
+	push ebx
+	LDSP
+	INC2_DSP
 	mov eax, [ebx]	; ut3
+	pop ebx
 	mov edx, 0
 	div ecx		; ut3/u
 	cmp eax, 0
 	jnz E_div_overflow
+	push ebx
 utmslash1:
-	push ebx		; keep local stack ptr
 	LDSP
 	mov [ebx-4*WSIZE], eax	; q3
 	mov [ebx-5*WSIZE], edx	; r3
-	pop ebx
+	INC2_DSP
 	INC_DSP
 	mov eax, [ebx]		; ut2
 	mov edx, 0
@@ -2388,9 +2411,11 @@ utmslash6:
 	STSP
 	INC2_DTSP
 	xor eax, eax
+	pop ebx  ; Win32 stdcall calling convention
 	ret
 
 _L_mstarslash:
+	push ebx
 	LDSP
 	INC_DSP
 	INC_DSP
@@ -2423,10 +2448,13 @@ _L_mstarslash:
 	cmp eax, 0
 	jnz mstarslash_neg
 	xor eax, eax
+	pop ebx
 	ret
 mstarslash_neg:
+	push ebx
 	DNEGATE
 	xor eax, eax
+	pop ebx
 	ret
 
 L_fmslashmod:
