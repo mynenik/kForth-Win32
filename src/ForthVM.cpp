@@ -369,6 +369,90 @@ if (debug)  cout << "<ForthVM Sp: " << GlobalSp << " Rp: " << GlobalRp <<
 
 extern "C" {
 
+int CPP_colon()
+{
+    // stack: ( -- | the colon compiler )
+
+    char WordToken[256];
+    State = TRUE;
+    pTIB = ExtractName (pTIB, WordToken);
+    strupr(WordToken);
+    strcpy (NewWord.WordName, WordToken);
+    NewWord.WordCode = OP_DEFINITION;
+    NewWord.Precedence = PRECEDENCE_NONE;
+    NewWord.Pfa = NULL;
+    NewWord.Cfa = NULL;
+    recursestack.erase(recursestack.begin(), recursestack.end());
+
+    return 0;
+}
+
+int CPP_semicolon()
+{
+  // stack: ( -- | terminate compilation of word )
+
+  int ecode = 0;
+
+  pCurrentOps->push_back(OP_RET);
+
+  if (State)
+    {
+      // Check for incomplete control structures
+
+      if (ifstack.size())                          ecode = E_C_INCOMPLETEIF;
+
+      if (beginstack.size() || whilestack.size())  ecode = E_C_INCOMPLETEBEGIN;
+
+      if (dostack.size() || leavestack.size())     ecode = E_C_INCOMPLETELOOP;
+
+      if (casestack.size() || ofstack.size())      ecode = E_C_INCOMPLETECASE;
+
+      if (ecode) return ecode;
+
+      // Add a new entry into the dictionary
+
+      if (debug) OutputForthByteCode (pCurrentOps);
+
+      NewWord.Pfa = new byte[pCurrentOps->size()];
+      NewWord.Cfa = NewWord.Pfa;
+
+      // Resolve any self references (recursion)
+
+      byte *bp, *dest;
+      unsigned int i;
+      vector<byte>::iterator ib;
+      DictionaryEntry d;
+
+
+      bp = (byte*) &NewWord.Pfa;
+      while (recursestack.size())
+        {
+          i = recursestack[recursestack.size() - 1];
+          ib = pCurrentOps->begin() + i;
+          for (i = 0; i < sizeof(void*); i++) *ib++ = *(bp + i);
+          recursestack.pop_back();
+        }
+
+      dest = (byte*) NewWord.Pfa;
+      bp = (byte*) &(*pCurrentOps)[0]; // ->begin();
+      while ((vector<byte>::iterator) bp < pCurrentOps->end()) *dest++ = *bp++;
+      if (IsForthWord(NewWord.WordName, &d)) {
+        *pOutStream << NewWord.WordName << " is redefined\n";
+      }
+      Dictionary.push_back(NewWord);
+      pCurrentOps->erase(pCurrentOps->begin(), pCurrentOps->end());
+      State = FALSE;
+    }
+  else
+    {
+      ecode = E_C_ENDOFDEF;
+      // goto endcompile;
+    }
+
+  return ecode;
+}
+//-----------------------------------------------------------------
+
 int CPP_backslash()
 {
   // stack: ( -- | advance pTIB to end of line )

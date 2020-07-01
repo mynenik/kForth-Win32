@@ -50,6 +50,8 @@ int ForthVM (vector<byte>*, int**, byte**);
 // The following C++ functions have C linkage
 
 extern "C" {
+int CPP_colon();
+int CPP_semicolon();
 int CPP_backslash();
 int CPP_lparen();
 int CPP_dotparen();

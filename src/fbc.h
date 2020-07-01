@@ -29,7 +29,7 @@
 #define OP_USLEEP       16
 #define OP_MS           17
 #define OP_MSFETCH      18
-
+#define OP_SYSCALL      19
 #define OP_FILL         20
 #define OP_CMOVE        21
 #define OP_CMOVEFROM    22
@@ -68,7 +68,8 @@
 #define OP_MSTARSLASH   55
 #define OP_FMSLASHMOD   56
 #define OP_SMSLASHREM   57
-
+#define OP_COLON        58
+#define OP_SEMICOLON    59
 #define OP_LT           60		
 #define OP_EQ           61		
 #define OP_GT           62	
@@ -208,7 +209,7 @@
 #define OP_FZEROEQ     196
 #define OP_FZEROLT     197
 #define OP_FZEROGT     198
-
+#define OP_FPROXIMATE  199
 #define OP_DROP        200
 #define OP_DUP         201
 #define OP_SWAP        202

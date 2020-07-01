@@ -77,7 +77,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_nop, L_sub, _CPP_dot, L_div     ; 44 -- 47
           dd _L_dabs, _L_dnegate, L_umstar, L_umslashmod   ; 48 -- 51
           dd L_mstar, L_mplus, L_mslash, _L_mstarslash ; 52 -- 55
-          dd L_fmslashmod, L_smslashrem, L_nop, L_nop        ; 56 -- 59
+          dd L_fmslashmod, L_smslashrem, _CPP_colon, _CPP_semicolon ; 56 -- 59
           dd L_lt, L_eq, L_gt, L_question      ; 60 -- 63
           dd L_fetch, L_addr, L_base, L_call    ; 64 -- 67
           dd L_definition, L_erase, L_fval, _CPP_forget      ; 68 -- 71
