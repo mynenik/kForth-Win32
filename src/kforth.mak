@@ -237,9 +237,8 @@ clean:
 		-del $(TARGETDIR)\$$SCW$$.$(PROJTYPE)
 		-del $(PROJ).CLE
 		-del $(OUTPUTDIR)\SCPH.SYM
-		-del kforth.dpd
 		-del $(OBJS)
-		-del $(OUTPUTDIR)\kforth.RES
+		-del kforth.RES
 
 cleanres:
 		-del $(OUTPUTDIR)\kforth.RES
