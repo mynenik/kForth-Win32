@@ -1,5 +1,5 @@
 // Resource script for kForth-Win32
 //
 
-KFORTHICON ICON	DISCARDABLE "kforth.ico"
+KFORTHICON ICON	DISCARDABLE "kforth2.ico"
 
