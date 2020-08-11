@@ -13,6 +13,7 @@
 \
 \       SCAN        ( a1 u1 c -- a2 u2 )
 \       SKIP        ( a1 u1 c -- a2 u2 )
+\       REPLACE-CHAR ( a u c1 c2 -- a u )
 \
 \       PARSE_TOKEN ( a u -- a2 u2 a3 u3 )
 \       PARSE_LINE  ( a u -- a1 u1 a2 u2 ... an un n )
@@ -66,6 +67,15 @@ DECIMAL
           LOOP
         THEN
         drop ;
+
+\ Replace char c1 with char c2 in string
+: replace-char ( c-addr u c1 c2 -- c-addr u )
+    2over 0 ?DO    \ c-addr u c1 c2 a
+      dup c@
+      3 pick = IF  2dup c! THEN
+      1+
+    LOOP
+    drop 2drop ;
 
 \ Parse next token from the string separated by a blank:
 \   a2 u2 is the remaining substring
