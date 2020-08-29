@@ -3,8 +3,8 @@
 \ This file is in the public domain. NO WARRANTY.
 \ Note licensing for ttester
 
-include ans-words
-include ttester
+S" ans-words" INCLUDED
+S" ttester" INCLUDED
 
 : { T{ ;
 

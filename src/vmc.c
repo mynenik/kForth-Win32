@@ -45,6 +45,7 @@ extern int* BottomOfStack;
 extern int* BottomOfReturnStack;
 extern byte* BottomOfTypeStack;
 extern byte* BottomOfReturnTypeStack;
+extern int CPP_bye();
 
 /* Provided by vm32.asm */
 extern int Base;
@@ -55,6 +56,8 @@ extern int JumpTable[];
 extern char WordBuf[];
 extern char TIB[];
 extern char NumberBuf[];
+extern char ParseBuf[];
+
 int L_dnegate();
 int L_dplus();
 int L_dminus();
@@ -89,6 +92,14 @@ int C_flnp1 () { DOUBLE_FUNC(log1p) return 0; }
 int C_flog  () { DOUBLE_FUNC(log10) return 0; }
 // int C_falog () { DOUBLE_FUNC(exp10) return 0; }
 
+int C_falog ()
+{
+     pf = (double*)(GlobalSp + 1);
+     f = *pf;
+     *pf = pow(10., f);
+     return 0;
+}
+     
 // powA  is copied from the source of the function pow() in paranoia.c,
 //   at  http://www.math.utah.edu/~beebe/software/ieee/
 double powA(double x, double y) /* return x ^ y (exponentiation) */
@@ -245,6 +256,23 @@ int C_write ()
     return 1;  /* not an address error */
 }
 
+// FSYNC ( fd -- ior )
+// Flush all buffered data written to file to the storage device
+// Low-level interface for implementation of standard Forth
+// word, FLUSH-FILE (Forth 94/Forth 2012)
+int C_fsync ()
+{
+  int fd;
+  int* pH;
+  int e;
+  DROP
+  fd = TOS;
+  pH = _get_osfhandle(fd);
+  e = (FlushFileBuffers(pH) == 0);
+  PUSH_IVAL( e )
+  return 0;
+}
+
 int C_ioctl ()
 {
   /* stack: ( handle request ain nbin aout nbout -- err | device control function ) */
@@ -266,6 +294,26 @@ int C_ioctl ()
   return 0;
 }
 /*----------------------------------------------------------*/
+
+void save_term ()
+{
+  ;
+}
+
+void restore_term ()
+{
+  ;
+}
+
+void echo_off ()
+{
+  ;
+}
+
+void echo_on ()
+{
+  ;
+}
 
 int C_key ()
 {
@@ -455,6 +503,86 @@ Note: strtoul() behavior is different between gcc and dmc compilers.
   return b;
 }
 /*---------------------------------------------------------*/
+
+int C_word ()
+{
+  /* stack: ( n -- ^str | parse next word in input stream )
+     n is the delimiting character and ^str is a counted string. */
+  DROP
+  char delim = TOS;
+  char *dp = WordBuf + 1;
+
+  while (*pTIB)  /* skip leading delimiters */
+    {
+      if (*pTIB != delim) break;
+      ++pTIB;
+    }
+  if (*pTIB)
+    {
+      int count = 0;
+      while (*pTIB)
+        {
+          if (*pTIB == delim) break;
+          *dp++ = *pTIB++;
+          ++count;
+        }
+      if (*pTIB) ++pTIB;  /* consume the delimiter */
+      *WordBuf = count;
+      *dp = ' ';
+    }
+  else
+    {
+      *WordBuf = 0;
+    }
+  PUSH_ADDR((int) WordBuf)
+  return 0;
+}
+
+int C_parse ()
+{
+  /* stack: ( n -- a u | parse string delimited by char n ) */
+  DROP
+  char delim = TOS;
+  char *dp = ParseBuf;
+  int count = 0;
+  if (*pTIB)
+    {
+
+      while (*pTIB)
+        {
+          if (*pTIB == delim) break;
+          *dp++ = *pTIB++;
+          ++count;
+        }
+      if (*pTIB) ++pTIB;  /* consume the delimiter */
+    }
+  PUSH_ADDR((int) ParseBuf)
+  PUSH_IVAL(count)
+  return 0;
+}
+/*----------------------------------------------------------*/
+
+int C_trailing ()
+{
+  /* stack: ( a n1 -- a n2 | adjust count n1 to remove trailing spaces ) */
+  int n1;
+  char *cp;
+  DROP
+  n1 = TOS;
+  if (n1 > 0) {
+    DROP
+    CHK_ADDR
+    cp = (char *) TOS + n1 - 1;
+    while ((*cp == ' ') && (n1 > 0)) { --n1; --cp; }
+    DEC_DSP
+    DEC_DTSP
+    TOS = n1;
+  }
+  DEC_DSP
+  DEC_DTSP
+  return 0;
+}
+/*----------------------------------------------------------*/
 
 int C_bracketsharp()
 {
@@ -649,6 +777,86 @@ int C_numberquery ()
 }
 /*----------------------------------------------------------*/
 
+int C_tofloat ()
+{
+  /* stack: ( a u -- f true | false ; convert string to floating point number ) */
+
+  char s[256], *cp;
+  double f;
+  unsigned nc, u;
+  int b;
+
+  DROP
+  nc = TOS;
+  DROP
+  cp = (char*) TOS;
+
+  b = FALSE; f = 0.;
+
+  if (nc < 256) {
+      /* check for a string of blanks */
+      u = nc;
+      while ((*(cp+u-1) == ' ') && u ) --u;
+      if (u == 0) { /* Forth-94 spec:  */
+        b = TRUE;    /* "A string of blanks is a special case representing zero."  */
+      }              /* "A null string will be converted as a valid 0E."  */
+      else {
+        /* Verify there is a numeric digit in the string */
+        u = 0;
+        for (u = 0; u < nc; ++u) if (isdigit(*(cp+u))) break;
+        if (u == nc) {
+          b = FALSE;                   /* no numeric digit in string */
+        }
+        else {
+          memcpy (s, cp, nc);
+          s[nc] = 0;
+          strupr(s);
+
+          /* Replace 'D' with 'E'  (Fortran double precision float exponent indicator) */
+          for (u = 0; u < nc; u++)
+            if (s[u] == 'D') s[u] = 'E';
+
+          /* '+' and '-' may also be indicators of the exponent if
+             they are used internally, following the significand; 
+             Replace with or insert 'E', as appropriate */
+
+          if ((! strchr(s, 'E')) && (nc > 2)) {
+            for (u = 1; u < (nc-1); u++) {
+              if (s[u] == '+') {
+                if ((isdigit(s[u-1]) || s[u-1] =='.') && isdigit(s[u+1])) s[u] = 'E';
+                }
+              else if (s[u] == '-')
+                {
+                   if ((isdigit(s[u-1]) || s[u-1] =='.') && isdigit(s[u+1])) {
+                      memmove(s+u+1, s+u, nc-u+1);
+                      s[u]='E';
+                   }
+                 }
+               else
+                 ;
+             }
+          }
+
+          /* Tack on power of ten (0), if it is missing */
+          if (! strchr(s, 'E')) strcat(s, "E0");
+          if (s[0]) b = IsFloat(s, &f);
+        }
+      }
+    }
+
+
+  if (b) {
+      DEC_DSP
+      *((double*)(GlobalSp)) = f;
+      DEC_DSP
+      STD_IVAL
+      STD_IVAL
+  }
+  PUSH_IVAL(b)
+  return 0;
+}
+/*-------------------------------------------------------------*/
+
 int C_system ()
 {
   /* stack: ( ^str -- n )
@@ -759,16 +967,18 @@ int C_search ()
 
   char *str1, *str2, *cp, *cp2;
   unsigned int n, n_needle, n_haystack, n_off, n_rem;
-  ++GlobalSp; ++GlobalTp;
-  n = *GlobalSp;
-  ++GlobalSp; ++GlobalTp;
-  if (*GlobalTp != OP_ADDR) return E_V_NOTADDR;
-  str2 = (char*)(*GlobalSp++); ++GlobalTp;
+  DROP
+  n = TOS;
+  DROP
+  CHK_ADDR
+  str2 = (char*) TOS;
+  DROP
   if (n > 255) n = 255;
   n_needle = n;
-  n_haystack = *GlobalSp++; ++GlobalTp;  // size of search buffer
-  if (*GlobalTp != OP_ADDR) return E_V_NOTADDR;
-  str1 = (char*)(*GlobalSp);  
+  n_haystack = TOS;    // size of search buffer
+  DROP
+  CHK_ADDR
+  str1 = (char*) TOS;
   n_rem = n_haystack;
   n_off = 0;
   cp = str1;
@@ -778,30 +988,41 @@ int C_search ()
   {
       while (n_rem >= n_needle)
       {
-	  cp = (char *) memchr(cp, *str2, n_rem);
-	  if (cp && (n_rem >= n_needle))
-	  {
-	      n_rem = n_haystack - (cp - str1);
-	      if (memcmp(cp, str2, n_needle) == 0)
-	      {
-		  cp2 = cp;
-		  n_off = (int)(cp - str1);
-		  break;
-	      }
-	      else
-	      {
-		  ++cp; --n_rem;
-	      }
-	  }
-	  else
-	      n_rem = 0;
+          cp = (char *) memchr(cp, *str2, n_rem);
+          if (cp && (n_rem >= n_needle))
+          {
+              n_rem = n_haystack - (cp - str1);
+              if (memcmp(cp, str2, n_needle) == 0)
+              {
+                  cp2 = cp;
+                  n_off = (int)(cp - str1);
+                  break;
+              }
+              else
+              {
+                  ++cp; --n_rem;
+              }
+          }
+          else
+              n_rem = 0;
       }
   }
+  else if (n_needle == 0)
+        cp2 = cp;
+
+  else
+    ;
 
   if (cp2 == NULL) n_off = 0;
-  *GlobalSp-- = (int)(str1 + n_off); *GlobalTp-- = OP_ADDR;
-  *GlobalSp-- = n_haystack - n_off; *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = cp2 ? -1 : 0 ; *GlobalTp-- = OP_IVAL;
+  TOS = (int)(str1 + n_off);
+  DEC_DSP
+  TOS = n_haystack - n_off;
+  DEC_DSP
+  TOS = cp2 ? -1 : 0 ;
+  DEC_DSP
+  STD_ADDR
+  STD_IVAL
+  STD_IVAL
 
   return 0;
 }
@@ -813,34 +1034,29 @@ int C_compare ()
 
   char *str1, *str2;
   int n1, n2, n, ncmp, nmin;
-  ++GlobalSp; ++GlobalTp;
-  n2 = *GlobalSp;
-  ++GlobalSp; ++GlobalTp;
-  if (*GlobalTp != OP_ADDR) return E_V_NOTADDR;
-  str2 = (char*)(*GlobalSp++); ++GlobalTp;
-  n1 = *GlobalSp++; ++GlobalTp;
-  if (*GlobalTp != OP_ADDR) return E_V_NOTADDR;
-  str1 = (char*)(*GlobalSp);
+  DROP
+  n2 = TOS;
+  DROP
+  CHK_ADDR
+  str2 = (char*) TOS;
+  DROP
+  n1 = TOS;
+  DROP
+  CHK_ADDR
+  str1 = (char*) TOS;
 
-  if ((n1 <= 0) || (n2 <= 0))
-  {
-      n = -1;
-  }
-  else
-  {
-      nmin = (n1 < n2) ? n1 : n2;
-      ncmp = memcmp(str1, str2, nmin);
+  nmin = (n1 < n2) ? n1 : n2;
+  ncmp = memcmp(str1, str2, nmin);
 
-      if (ncmp == 0)
-      {
-	  if (n1 == n2) n = 0;
-	  else if (n1 < n2) n = -1;
-	  else n = 1;
-      }
-      else if (ncmp < 0)  n = -1;
-      else n = 1;
+  if (ncmp == 0) {
+    if (n1 == n2) n = 0;
+    else if (n1 < n2) n = -1;
+    else n = 1;
   }
-  *GlobalSp-- = n; *GlobalTp-- = OP_IVAL;
+  else if (ncmp < 0)  n = -1;
+  else n = 1;
+
+  PUSH_IVAL(n)
   return 0;
 }
 /*------------------------------------------------------*/

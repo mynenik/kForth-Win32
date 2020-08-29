@@ -32,6 +32,7 @@ HEADERS		= fbc.h \
 		  ForthVM.h
 
 DEFFILE		= kforth.DEF
+DEF_DIR_VAR     = ""
 
 !IF $(DEBUG)
 OUTPUTDIR	= .
@@ -45,7 +46,7 @@ LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB
 
 CFLAGS		=  -Jm -mn -C -WA -S -3 -a8 -c -w- -w2 -w3 -w6 -g 
 LFLAGS		=  /CO /NOI /DE /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES 
-DEFINES		= -D_CONSOLE -D_CONSOLE=1
+DEFINES		= -D_CONSOLE -D_CONSOLE=1 -DDIR_ENV_VAR=\"KFORTH_DIR\"
 !ELSE
 OUTPUTDIR	= .
 CREATEOUTPUTDIR	=

@@ -9,6 +9,11 @@
  * LAST CHANGE : May 21, 1994, Marcel Hendrix, seems ok
  * LAST CHANGE : May 14, 1994, Marcel Hendrix, port
  * EXTENSIVE REVISIONS: March--April 2003, Krishna Myneni
+ * Revisions   : Mar 18, 2005, Krishna Myneni, multi-line lists
+ *             : Dec 28, 2006, km; added set-difference:test
+ *             : Jun 20, 2010, km; removed dependence on strings module;
+ *             :   should work without change under ANS Forths which provides 
+ *             :   VOCABULARY and sufficient dictionary space.
  * )
 
 \ version 1.1a, 2003-04-15
@@ -35,294 +40,70 @@ I strongly suspect a stack size / recursion problem for some degenerated
 lists.
 )
 
-\ Note: The garbage collector code has been removed from this version.  KM 
-\
-\
-\	CONS
-\
-\ Construct a new list that consists of the old one but additionally has a
-\ cell containing ^value in front.
-\ e.g. '( adam ) car  '( ape 123 '456 ) ptr hicky
-\      hicky cons print --->  ( adam ape #123 456 )
-\ or   quote eva  hicky cons print --->  ( eva ape #123 456 )
-\
-\
-\	CAR
-\
-\ CAR returns the value of the first link in a list. Equivalent to FIRST .
-\ e.g. '( ape 123 '456 ) to hicky   hicky car print  ---> ape
-\      hicky cdr cdr car print  ---> 456
-\
-\
-\	FIRST
-\
-\ FIRST returns the value of the first link in a list. Equivalent to CAR .
-\ e.g. '( ape 123 '456 ) to hicky   hicky first print  ---> ape
-\      hicky rest cdr first print  ---> 456
-\
-\
-\	CDR
-\
-\ CDR returns the address of the next link in the list.
-\ e.g. '( ape 123 '456 ) to hicky  hicky cdr print ---> ( #123 456 )
-\      hicky cdr cdr print ---> ( 456 )
-\
-\
-\	REST
-\
-\ REST returns the address of the next link in the list. Equivalent to CDR .
-\ e.g. '( ape 123 '456 ) to hicky  hicky rest print ---> ( #123 456 )
-\      hicky rest rest print ---> ( 456 )
-\
-\
-\	SECOND
-\
-\
-\	LAST
-\
-\ Return the last member of a given list.
-\ Example: '( gh ij kz ( ab cd de ]  last print ---> ( ( ab cd de ) )
-\
-\
-\	REVERSE
-\
-\ Put the elements of the given list in reverse order.
-\ The original list is kept intact. The returned list is newly created.
-\ Example:  '( one two three ) reverse print ---> ( three two one )
-\
-\
-\	LIST
-\
-\
-\	ATOM$P
-\
-\ is object an atomic string?
-\ Example: quote  456 atom$p . ---> 0
-\          quote '456 atom$p . ---> -1
-\
-\
-\	NUMBERP
-\
-\ "lisp numbers" are stored amongst the lists and are distinguished by
-\ having 0 in their cdr slot.
-\ Example: quote  456 numberp . ---> -1
-\          quote '456 numberp . ---> 0
-\
-\
-\	ATOM or ATOMP
-\
-\ Is the object an atom$ or a number?
-\ Example: quote  456 atomp . ---> -1
-\          quote '456 atomp . ---> -1
-\          456 atomp . ---> 0
-\
-\
-\	LISTP
-\
-\ Is address pointing to a list (or nil)?
-\ Example: '( 456 ab not ) listp . ---> -1
-\          123 listp . ---> 0
-\
-\
-\	DOTP
-\
-\ Is this list a "dotted" pair?  (Then the cdr slot does not contain a list).
-\ Example: '( abc . def ) dotp . ---> -1
-\          '( abc   def ) dotp . ---> 0
-\
-\
-\	LATP
-\
-\ Does the list (top-level) consist only of atoms?
-\ Example: '( abc def ) latp . ---> -1
-\          '( abc ( de fg hi ) ) latp . ---> 0
-\
-\
-\	LENGTH
-\
-\ Number of top-level list elements.
-\ Example: '( abc ( de fg hi ) ) length . ---> 2
-\          '( abc ( de fg hi ) ) cdr car length . ---> 3
-\
-\
-\	#ATOMS
-\
-\ The total number of constituent atoms in list.
-\ Example: '( abc ( de fg hi ) ) #atoms . ---> 4
-\
-\
-\	POSITION
-\
-\
-\	POSITION:TEST
-\
-\
-\	NTH
-\
-\
-\	MEMBER
-\
-\
-\	MEMBER:TEST
-\
-\
-\	NULL  or  NIL?
-\
-\ Test a list to see if it is the NIL list.
-\
-\
-\	EVERY
-\
-\
-\	SOME
-\
-\
-\	MAPCAR
-\
-\
-\
-\	EQ
-\
-\ The only time two lists will be equal with eq is when they are the same list.
-\ Two atoms are equal if they are identical.
-\ Example: quote-atom 123  quote-atom 123  equal . ---> -1
-\          quote-atom 321  quote-atom 123  equal . ---> 0
-\          '( aap noot mies ) '( aap noot mies ) equal . ---> 0
-\          '( aap noot mies ) dup equal . ---> -1
-\
-\
-\	EQUAL
-\
-\ Lisp "equal"
-\
-\
-\	LIST-EQUAL
-\
-\ Do the lists consist of equivalent atoms?
-\ Example: '( aap noot mies ) '( aap noot mies ) list-equal . ---> -1
-\
-\
-\	PLUS
-\
-\ Model for l-number arithmetic: addition.
-\ Example: quote 5  quote 6  plus print ---> #11
-\
-\
-\	ZEROP
-\
-\ Model for l-number arithmetic: compare for zero.
-\ Example: quote 0  zerop . ---> -1
-\
-\
-\	MEMBERP
-\
-\ Is the expression part of the given list?
-\ Example: quote ab  '( gh ij kz ab cd de )  memberp . ---> -1
-\          '( ab )  '( gh ij kz ab ( cd de ) )  memberp . ---> 0
-\
-\
-\	COPY-LIST
-\
-\ Make a fresh copy of a list
-\ Example: '( x y z ) ptr l1  l1 copy-list ptr l2  l1 l2 eq . ---> 0
-\          l1 print l2 print ---> ( one deux drie ) ( one deux drie )
-\
-\
-\	NCONC
-\
-\ Append list2 to list1 and return list1.
-\ DANGER! when list1 or list2 contains the other and you attempt to
-\ traverse the result, there will be infinite recursion.
-\ Example: '( Bo has problems ) '( with breathing ) append print
-\          ---> ( Bo has problems with breathing )
-\
-\
-\	APPEND
-\
-\ Append list2 to list1 and return a new list3. Similar to NCONC
-\ but does not modify list1.
-\ DANGER! when list1 or list2 contains the other and you attempt to
-\ traverse the result, there will be infinite recursion.
-\
-\
-\	REMOVE
-\
-\ Remove all occurances of an atom from the top-level of a list.
-\ Returns a new list --- the original list is not modified.
-\ Example: quote ab   '( ab bc cd ab ( ab ab ) )  remove print
-\          ---> ( bc cd ( ab ab ) )
-\
-\
-\	DELETE
-\
-\ Remove all occurances of an atom from the top-level of a list.
-\ The original list is modified.
-\  
-\	SUBSTITUTE
-\
-\
-\
-\	SUBST
-\
-\
-\
-\	QUOTE-LIST
-\
-\ Create a list.
-\ e.g. "quote-list ( snimp ( blaggle ) ( morkle . glork ) ( 22 skid doo )]"
-\ "]" closes all right parentheses still open. Other special characters are
-\ "@" and ".". "@L1" in the quoted list puts the already defined L1 into the
-\ list. "." creates a dotted pair.
-\ The above list should print:
-\ ( snimp ( blaggle ) ( morkle . glork ) ( #22 skid doo ) )
-\
-\
-\	'(
-\
-\ Create a list, like QUOTE-LIST , but more convenient.
-\ Example: '( ( some ) stuff (( like ) this ) ) print --->
-\             ( ( some ) stuff (( like ) this ) )
-\
-\
-\	QUOTE
-\
-\ Creates a list from a string, if the string starts with "(". Else turns it
-\ into an atom.
-\ Example: quote ( ( some ) stuff (( like ) this ) ) print --->
-\          ( ( some ) stuff (( like ) this ) )
-\      or: quote jam print ---> jam
-\
-\
-\	TYPE-LIST
-\
-\ Type the contents of a list.
-\ Example: '( 1 2 ( '123 a ) ) type-list ---> ( #1 #2 ( 123 a ) )
-\
-\
-\	PRINT
-\
-\ Types the contents of about everything (list or atom$ or number).
-\ Example: '( 1 2 ( '123 a ) ) print ---> ( #1 #2 ( 123 a ) )
-\          quote ape print ---> ape
-\
-\
-\	.STAT
-\
-\ Print the statistics of memory usage.
-\ e.g. .STAT --->
-\      There are 1022 links available.
+VOCABULARY LISP
+ONLY  FORTH ALSO  LISP DEFINITIONS
 
-     
-\ ANS Forth definitions of kForth words.
-\ Uncomment the following lines if not using kForth
- 
-\ synonym ptr value
-\ : ?allot here swap allot ;
-\ : nondeferred ;
+DECIMAL
 
+[UNDEFINED] a@ [IF]    \ provide kForth-compatible defns.
+  [DEFINED] synonym [IF]
+    synonym a@  @ 
+    synonym ptr value
+  [ELSE]
+    : a@ @ ;
+    : ptr value ;
+  [THEN]
+: ?allot here swap allot ;
+: nondeferred ;
+[ELSE]
 : ptr create 1 cells ?allot ! does> a@ ;
+[THEN]
+
+variable dsign
+: >d? ( c-addr u -- d flag ) 
+    -trailing
+    0 0 2swap
+    \ skip leading spaces and tabs
+    BEGIN over c@ dup BL = swap 9 = or WHILE 1 /string REPEAT
+    ?dup IF
+	FALSE dsign !
+	over c@
+	CASE
+	    [char] - OF TRUE dsign ! 1 /string ENDOF
+	    [char] + OF 1 /string ENDOF
+	ENDCASE
+	>number nip 0= IF
+	  dsign @ IF dnegate THEN true
+        ELSE false THEN
+    ELSE drop false THEN ;
 
 : 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
+
+: pack ( a u a2 -- | copy string to counted string at a2)
+    >r 0 max 255 min r> 2dup c! 1+ swap cmove ;	
+
+[UNDEFINED] scan [IF] 
+: scan  ( addr len char -- addr' len' )
+    over 0> IF
+      over 0 DO  >r over c@ r@ = 
+	IF  r> leave  ELSE  1 /string  r>  THEN
+      LOOP
+    THEN  drop ;
+[THEN]
+
+[UNDEFINED] skip [IF] 
+: skip  ( addr len char -- addr' len' )
+    over 0> IF
+      over 0 DO  >r over c@ r@ <> 
+        IF  r> leave  ELSE  1 /string r>  THEN
+      LOOP
+    THEN drop ;
+[THEN]
+
+\ parse next token from the string; a3 u3 is the token string
+: parse_token ( a u -- a2 u2 a3 u3)
+    bl skip 2dup bl scan 2>r r@ - 2r> 2swap ;
+
 
 512 1024 *  CONSTANT HEAPSIZE
 CREATE heap HEAPSIZE ALLOT
@@ -340,12 +121,6 @@ heap ptr hptr
 
 : size? ( hndl -- u | return size of region)
     S" CELL+ @" EVALUATE ; IMMEDIATE
-
-\ VOCABULARY LISP
-\ ONLY  FORTH ALSO  LISP DEFINITIONS
-
-DECIMAL
-
 
 \ allocate a section of the heap for the linked lists
 
@@ -433,7 +208,7 @@ a list member.
 
 \ Allocate space for atom$ and its properties
 
-: $>atom$ ( addr count -- hndl )
+: $>atom$ ( c-addr u -- hndl )
 	DUP properties + halloc
 	DUP >R a@			\ c-addr u 'heap --
 	SWAP CMOVE R> ;			\ copy string 
@@ -444,43 +219,39 @@ a list member.
 : atom$-length  ( hndl -- #characters )
         >$ nip properties - ;
 
-
 : cons  ( ^val list1 -- list2 ) \ LISP  "cons"
         get-a-cell              \ ^val list cell
         DUP >R   !              \ "list" is now cdr in new cell
         R@ CELL+ !  R> ;
 
 : $cons ( addr list -- list )		\ cons an atom$
-	>R COUNT $>atom$ R> cons ;
-
+	>R count $>atom$ R> cons ;
 
 : quote-atom$ ( "name" -- hndl )	\ Lisp "quote-atom-string"
 	bl word count $>atom$ ;
 
 : (quote-number)  ( "numstr" -- list )     \ literal number-atoms go
-        bl word string>s                \ into the list space with cdr=0
-        0 cons ;
-
-: str>hndl ( ^str -- hndl )
-	strbufcpy dup number? 
-	if drop nip 0 cons 
-	else 
-	  2drop count
+        bl word count  >d? drop d>s  0 cons ;  \ into the list space with cdr=0
+       
+: $>hndl ( caddr u -- hndl )
+	2dup >d? 
+	if d>s >r 2drop r> 0 cons 
+	else
+	  2drop
 	  over c@
-	  [char] ' = if 1- swap 1+ swap then
-	  $>atom$ then ;  
+	  [char] ' = if 1 /string then
+	  $>atom$ then ;
   
 : quote-atom    ( "str" -- hndl )       \ LISP  "quote-atom"
-        bl word str>hndl ;
+        bl word count $>hndl ;
 
 : (quote-dot)   ( -- hndl )
-        quote-atom 
-	bl word drop  \ consume the trailing ')'
+        quote-atom  
+        bl word drop \ consume the trailing ')'
 ;
 
 : car ( list -- ^value )                        \ LISP  "car"
         S" CELL+ a@" EVALUATE ; IMMEDIATE nondeferred
-
 
 : first ( list -- ^value )                      \ LISP  "first"
         S" CELL+ a@" EVALUATE ; IMMEDIATE nondeferred
@@ -510,8 +281,7 @@ a list member.
              THEN ;
 
 : atomp ( hndle|cell.value -- f )       \ LISP  "atom-pee"
-        dup atom$p swap
-        numberp or ;
+        dup atom$p swap numberp or ;
 
 : atom atomp ;  \ for consistency with Common Lisp
 
@@ -548,16 +318,11 @@ a list member.
                       swap  cdr recurse   +
                THEN ;
 
-
 : plus  ( l-num1 l-num2 -- l-num3 )		\ LISP  "plus"
         car swap car + 0 cons ;
 
-
-: zerop ( l-number -- flag )			\ LISP  "zero-pee"
-        car 0= ;
-
-
-
+: zerop ( l-number -- flag )  car 0= ; 		\ LISP  "zero-pee"
+        
 : number-eq ( number.hndl1 number.hndl2 -- flag )
         car swap car = ;
 
@@ -732,7 +497,21 @@ a list member.
 	  IF  r> drop  ELSE  r> r> cons >r THEN cdr
 	REPEAT 2drop r> ;
 
+nil ptr temp-list
+: set-difference:test  ( list1 list2 xt -- list3 )  \ LISP "set-difference" with test
+        >r
+	dup nil? IF drop copy-list r> drop exit THEN
+	over nil? IF drop r> drop exit THEN
+	nil to temp-list
+	swap r>
+	BEGIN  over nil? 0=  WHILE   	\ list2 list1 xt
+		>r dup car dup >r
+		2 pick 2r@ drop member:test nil? 0=
+		IF  2r> drop  ELSE  2r> temp-list cons to temp-list THEN
+		swap cdr swap
+	REPEAT drop 2drop temp-list ;
 
+ 
 : intersection ( list1 list2 -- list3 )		\ LISP "intersection"
 	2dup nil? swap nil? or IF 2drop nil exit THEN
 	nil >r
@@ -757,13 +536,19 @@ a list member.
 	REPEAT drop ;
 
 
-: mapcar ( list1 xt -- list2 )			\  LISP  "mapcar"
-    >r nil swap 
+: mapcar ( list1 xt -- list2 )			\  LISP  "mapcar" with one
+    >r nil swap 				\    list argument
     BEGIN dup nil? 0=
     WHILE dup car r@ execute rot cons swap cdr 
     REPEAT drop r> drop reverse
 ;
 
+: mapcar2 ( list1 list2 xt -- list3 ) 		\ LISP "mapcar" with two
+    nil >r >r swap  				\    list arguments
+    BEGIN dup nil? 0=
+    WHILE dup car r@ execute rot cons swap cdr 
+    REPEAT drop r> drop reverse						\   list args
+;
 
 : every  ( list xt -- flag )			\ LISP "every"
     >r true swap  \ flag list
@@ -777,6 +562,11 @@ a list member.
     WHILE dup car r@ execute rot or swap cdr
     REPEAT drop r> drop ;
  
+: reduce  ( n1|^val1|list1  list2  xt -- n2|^val2|list3 )     \ LISP "reduce"
+    >r
+    BEGIN dup nil? 0= 
+    WHILE swap over first r@ execute swap rest
+    REPEAT drop r> drop ;
 
 0 value ]?
 
@@ -792,24 +582,23 @@ a list member.
 	false to  ]?
 	nil
 	begin
-	  bl word dup count	\ list ^str a u 
-	  if
-\ OVER COUNT TYPE CR
-	    c@ case		\ list ^str char
-	      [char] (  of  drop recurse swap cons false  endof
-	      [char] )  of  drop true                     endof
-	      [char] ]  of  drop true dup to ]?           endof
-              [char] .  of  drop (quote-dot) over ! true  endof
-              [char] @  of  count 1- swap 1+ swap strpck find
+	  bl word count dup   \ list c-addr u u 
+	  if  over c@
+	    case		\ list c-addr u char
+	      [char] (  of  2drop recurse swap cons false  endof
+	      [char] )  of  2drop true                     endof
+	      [char] ]  of  2drop true dup to ]?           endof
+              [char] .  of  2drop (quote-dot) over ! true  endof
+              [char] @  of  1 /string pad pack pad find
                             IF >body a@ ELSE drop nil THEN
                             swap cons false               endof
-	      [char] "  of  drop postpone s" strpck str>hndl
+	      [char] "  of  2drop postpone s" $>hndl
 	                    swap cons false	          endof
-	      >r  str>hndl swap cons false r>
+	      >r  $>hndl swap cons false r>
 	    endcase
 	    ]? if drop true then
 	  else
-	    2drop true
+	    2drop refill invert ( true)
 	  then
 	until
 	dup dotp 0= if reverse then ;
@@ -820,13 +609,13 @@ a list member.
 
 
 : quote ( "str" -- list|^val )            \ LISP  "quote"
-        bl word dup count
-	IF  
-	  c@ case 
-	    [char] (  of  drop quote-list  endof
-	    [char] "  of  drop postpone s" strpck str>hndl endof
-	    >r  str>hndl  r>
-	  endcase 
+        bl word count dup
+	IF  over c@
+          CASE 
+	    [char] (  of  2drop quote-list  endof
+	    [char] "  of  2drop postpone s" $>hndl endof
+	    >r  $>hndl  r>
+	  ENDCASE 
 	ELSE drop THEN ;
 
 : make-non-atomic-list ( ^val1 ^val2 ... ^valn  n -- list )
@@ -835,7 +624,7 @@ a list member.
 : make-token-list ( a u -- list | make a flat list of tokens from a string )
 	nil >r 
 	begin  parse_token dup
-	while  strpck str>hndl r> cons >r	  
+	while  $>hndl r> cons >r	  
 	repeat
 	2drop 2drop r> reverse ;
 
@@ -889,4 +678,6 @@ a list member.
      cr ." There are " free-links length 5 .r ."  links available."
      cr heap HEAPSIZE + hptr - 6 .r 
      ."  bytes are available for storing atoms." cr ;   
+
+ALSO FORTH DEFINITIONS
 

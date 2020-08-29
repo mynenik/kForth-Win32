@@ -2,7 +2,7 @@
 \
 \ Some ANS Forth words which are not a part of the intrinsic
 \ dictionary of kForth are implemented here in source code.
-\ Use with kForth version 1.0.14 or higher.
+\ Use with kForth version 1.4.x or higher.
 \
 \ Some other words, which are not part of the ANS specification,
 \ but which are so commonly used that they are effectively
@@ -12,82 +12,56 @@
 \ of other ANS Forth words which are not a part of kForth's 
 \ dictionary:   
 \ 
+\     strings.4th 
 \     files.4th 
 \     ansi.4th 
 \     dump.4th
 \
-\ Copyright (c) 2002--2020 Krishna Myneni
+\ Copyright (c) 2002--2020 Krishna Myneni, Creative Consulting
+\   for Research and Education
 \
-\ Provided under the GNU General Public License
+\ Provided under the GNU Lesser General Public License (LGPL)
 \
-
+\ Revisions:
+\   2002-09-06  Created    km
+\   2002-10-27  added F~   km
+\   2003-02-15  added D2*, D2/, DMIN, DMAX, 2CONSTANT, 2VARIABLE, 
+\                 2LITERAL  km
+\   2003-03-02  fixed F~ for case of exact equality test  km
+\   2003-03-09  added >NUMBER, DEFER, and IS  km
+\   2003-09-28  added [IF], [ELSE], [THEN]  km
+\   2004-09-10  added CATCH and THROW  km
+\   2005-09-19  added [DEFINED] and [UNDEFINED]  km
+\   2005-09-28  commented out defn of D>S km
+\   2006-04-06  replaced M*/ by UDM* for ppc version dnw
+\   2006-04-09  removed DMIN, DMAX, now intrinsic dnw
+\   2006-05-30  commented out MOVE, now intrinsic km
+\   2007-07-15  removed obsolete defs, which were commented out  km
+\   2008-03-16  removed 2CONSTANT and 2VARIABLE, now intrinsic  km
+\   2008-03-28  removed 2LITERAL, now intrinsic  km
+\   2009-09-20  removed >NUMBER, now intrinsic  km
+\   2009-09-26  removed WITHIN, now intrinsic  km
+\   2009-10-01  modified [ELSE] to be case insensitive  km
+\   2009-11-26  removed D2* and D2/, now intrinsic  km
+\   2010-12-23  added $ucase and revised [ELSE] to use $ucase  km
+\   2011-02-05  km  removed [DEFINED] and [UNDEFINED], now intrinsic 
+\   2020-01-21  km  added SYNONYM
+\   2020-01-25  km  revised defn. of VALUE for improved efficiency.
 BASE @
 DECIMAL
-
-\ == From the Forth-94 CORE word set ( DPANS94, sec. 6.1)
+\ ============== From the CORE wordset
 
 : SPACE BL EMIT ;
 : CHARS ;
 
-: >NUMBER ( ud1 a1 u1 -- ud2 a2 u2 )
-    DUP 0 ?DO
-      2DUP DROP C@ 
-      DUP [CHAR] 9 > IF 223 AND [CHAR] A - 10 + ELSE [CHAR] 0 - THEN
-      DUP -1 > OVER BASE @ < AND
-      IF -ROT 2>R >R BASE @ 1 M*/ R> S>D D+ 2R>
-      ELSE DROP LEAVE THEN
-      1- SWAP 1+ SWAP
-    LOOP ; 
- 
-
-\ == From the Forth-94 CORE EXT word set  ( DPANS94, sec. 6.2)
+\ ============ From the CORE EXT wordset
 
 CREATE PAD 512 ALLOT
 
 : TO ' >BODY STATE @ IF POSTPONE LITERAL POSTPONE ! ELSE ! THEN ; IMMEDIATE
-: VALUE CREATE 1 CELLS ?ALLOT ! DOES> @ ;
-: WITHIN  OVER - >R - R> U< ;
+: VALUE CREATE 1 CELLS ?ALLOT ! IMMEDIATE DOES> POSTPONE LITERAL POSTPONE @ ;
 
-
-\ == From the Forth-94 STRING word set  ( DPANS94, sec. 17.6)
-
-: BLANK ( addr u -- | fill u bytes starting at addr with bl character )
-    BL FILL ;
-
-: /STRING ( a1 u1 n -- a2 u2 | adjust size of string by n characters)
-    dup >r - swap r> + swap ;
-
-: -TRAILING ( a n1  -- a n2 | adjust count n1 to remove trailing spaces )
-        dup 0>
-        if
-          dup
-          0 ?do
-            2dup + 1- c@
-            bl =
-            if 1- else leave then
-          loop
-        then ;
-
-: SLITERAL ( a u -- | compile string into definition at compile time )
-        swap postpone literal postpone literal ; immediate
-
-
-\ == Forth-94 DOUBLE number word set ( DPANS94, sec. 8.6)
-
-\ The following are valid for two's-complement systems such as Intel x86
-: D>S  DROP ;
-: D2*  2* >R DUP 31 RSHIFT SWAP 2* SWAP R> OR ;
-: D2/  DUP 31 LSHIFT SWAP 2/ >R SWAP 1 RSHIFT OR R> ;
-
-: DMIN ( d1 d2 -- d1 | d2) 2OVER 2OVER D< NOT IF 2SWAP THEN 2DROP ;
-: DMAX ( d1 d2 -- d1 | d2) 2OVER 2OVER D< IF 2SWAP THEN 2DROP ;
-
-: 2CONSTANT  FCONSTANT ;  \ valid for kForth, not all other ANS Forths
-: 2VARIABLE  FVARIABLE ;  \   "                   "
-: 2LITERAL   SWAP POSTPONE LITERAL POSTPONE LITERAL ; IMMEDIATE  
-
-
-\ == Forth-94 FLOATING EXT word set ( DPANS94, sec. 12.6)
+\ ============ From the FLOATING EXT wordset
 
 : F~ ( f1 f2 f3 -- flag )
      FDUP 0e F> 
@@ -102,27 +76,39 @@ CREATE PAD 512 ALLOT
      THEN ;
  
 
-\ == Forth-94 PROGRAMMING TOOLS EXT word set ( DPANS94, sec. A.15)
+\ ============ From the PROGRAMMING TOOLS wordset
+
+\ $ucase is not a standard word; it is provided here as a helper.
+: $ucase ( a u -- a u )  \ transform string to upper case
+     2DUP  0 ?DO                    
+       DUP C@ 
+       DUP [CHAR] a [ CHAR z 1+ ] LITERAL WITHIN 
+       IF 95 AND THEN OVER C! 1+
+     LOOP  DROP ;
+
+( see DPANS94, sec. A.15)
 
 : [ELSE]  ( -- )
-    1 BEGIN                               \ level
+    1 BEGIN                                  \ level
       BEGIN
-        BL WORD COUNT  DUP  WHILE         \ level adr len
-        2DUP  S" [IF]"  COMPARE 0=
-        IF                                \ level adr len
-          2DROP 1+                        \ level'
-        ELSE                              \ level adr len
-          2DUP  S" [ELSE]"
-          COMPARE 0= IF                   \ level adr len
-             2DROP 1- DUP IF 1+ THEN      \ level'
-          ELSE                            \ level adr len
-            S" [THEN]"  COMPARE 0= IF     \ level
-              1-                          \ level'
-            THEN
-          THEN
-        THEN ?DUP 0=  IF EXIT THEN        \ level'
-      REPEAT  2DROP                       \ level
-    REFILL 0= UNTIL                       \ level
+        BL WORD COUNT DUP  WHILE            \ level adr len
+            $ucase
+	    2DUP  S" [IF]"  COMPARE 0=
+            IF                               \ level adr len
+              2DROP 1+                       \ level'
+            ELSE                             \ level adr len
+	      2DUP  S" [ELSE]"  COMPARE 0=
+	      IF                             \ level adr len
+                2DROP 1- DUP IF 1+ THEN      \ level'
+	      ELSE                           \ level adr len
+	        S" [THEN]"  COMPARE 0=
+	        IF                           \ level
+                  1-                         \ level'
+                THEN
+              THEN
+            THEN ?DUP 0=  IF EXIT THEN       \ level'
+      REPEAT  2DROP                          \ level
+    REFILL 0= UNTIL                          \ level
     DROP
 ;  IMMEDIATE
 
@@ -131,9 +117,13 @@ CREATE PAD 512 ALLOT
 
 : [THEN]  ( -- )  ;  IMMEDIATE
 
+\ Forth-2012 Programming Tools 15.6.2.2264
+: SYNONYM ( "<newname>" "<oldname>" -- )
+   CREATE ' 1 CELLS ?ALLOT ! DOES> A@ EXECUTE ; 
 
-\ == From the EXCEPTION word set ( DPANS94, sec. 9.6)
-( also see DPANS94, sec. A.9 )
+
+\ ============= From the EXCEPTION wordset
+( see DPANS94, sec. A.9 )
 
 variable handler
 : empty-handler ;
@@ -144,7 +134,7 @@ variable handler
     SP@ >R  ( xt )  \ save data stack pointer
     HANDLER A@ >R   \ and previous handler
     RP@ HANDLER !   \ save return point for THROW
-    EXECUTE         \ execute returns if no THROW
+    EXECUTE	    \ execute returns if no THROW
     R> HANDLER !    \ restore previous handler
     R> DROP         \ discard saved state
     0               \ normal completion
@@ -162,7 +152,7 @@ variable handler
     THEN
 ;
 
-\ == De Facto Standard Words
+\ ============= Forth 200x Standard Words
 
 : DEFER  ( "name" -- )
       CREATE 1 CELLS ?ALLOT ['] ABORT SWAP ! DOES> A@ EXECUTE ;
@@ -175,8 +165,4 @@ variable handler
         >BODY !
       THEN ; IMMEDIATE
 
-: [DEFINED] ( "name" -- b ) bl word find nip ;
-: [UNDEFINED] ( "name" -- b ) [DEFINED] invert ;
-
 BASE !
-

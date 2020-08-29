@@ -2,7 +2,7 @@
 \
 \ ANSI Terminal words for kForth
 \
-\ Copyright (c) 1999--2002 Krishna Myneni
+\ Copyright (c) 1999--2004 Krishna Myneni
 \ Creative Consulting for Research and Education
 \
 \ This software is provided under the terms of the GNU
@@ -15,7 +15,10 @@
 \    10-11-1999 force cursor to 0 0 on page; define at-xy  KM
 \    01-23-2000 replaced char with [char] for ANS Forth compatibility KM
 \    08-29-2002 use 0,0 as top left for AT-XY in accord with ANS Forth  KM
-
+\    09-08-2004 added console query words provided by Charley Shattuck: 
+\                 AT-XY?  ROWS  COLS   
+\               Note that ROWS and COLS are also provided in gforth and PFE
+\    09-10-2004 added scrolling words -- CS
 \ Colors
 
 0 constant BLACK
@@ -118,7 +121,36 @@ save_base
 	ansi_escape [char] 7 emit [char] m emit
 	restore_base ;  
 
+: read-cdnumber  ( c - n | read a numeric entry delimited by character c)
+	>r 0 begin
+		key dup r@ - while
+		swap 10 * swap [char] 0 - +
+	repeat
+	r> 2drop ;
 
+: at-xy?  ( -- x y | return the current cursor coordinates)
+	ansi_escape ." 6n"
+	key drop key drop  \ <esc> [
+	[char] ; read-cdnumber [char] R read-cdnumber
+	1- swap 1- ;
+
+: rows  ( -- n | return row size of console) 
+    save_cursor  0 100 at-xy  at-xy? nip  restore_cursor ;
+
+: cols  ( -- n | return column size of console)
+    save_cursor  200 0 at-xy  at-xy? drop restore_cursor ;  
+
+: reset-scrolling  (  - )
+	ansi_escape [char] r emit ;
+
+: scroll-window  ( start end - )
+	ansi_escape swap u>string count type
+	[char] ; emit u>string count type
+	[char] r emit ;
+
+: scroll-up  (  - ) ansi_escape [char] M emit ;
+
+: scroll-down  (  - ) ansi_escape [char] D emit ;
 
 
 restore_base

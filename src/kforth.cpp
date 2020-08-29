@@ -27,8 +27,8 @@
 //
 //      kforth [name[.4th]] [-D] [-e string]
 //
-char* version = "1.0.16-4";
-char* Rls_Date = "2020-06-30";
+char* version = "1.6.6";
+char* Rls_Date = "2020-08-28";
 
 #include <iostream>
 #include <fstream>
@@ -40,13 +40,19 @@ using namespace std;
 #include "ForthCompiler.h"
 #include "ForthVM.h"
 
-extern vector<DictionaryEntry> Dictionary;
+extern vector<WordList> Dictionary;
+extern char* C_ErrorMessages[];
 
-extern "C" int* JumpTable;
-extern "C" int* BottomOfStack;
-extern "C" int* BottomOfReturnStack;
+extern "C" long int* JumpTable;
+extern "C" long int* BottomOfStack;
+extern "C" long int* BottomOfReturnStack;
 extern "C" char TIB[];
-int debug = 0;
+extern "C" {
+    void echo_on(void);
+    void echo_off(void);
+}
+
+bool debug = false;
 
 int main(int argc, char *argv[])
 {
@@ -68,7 +74,7 @@ int main(int argc, char *argv[])
 
       while (i < argc) {
 	if (!strcmp(argv[i], "-D")) {
-	    debug = -1;
+	    debug = true;
 	  }
 	else if (!strcmp(argv[i], "-e ")) {
 	  if (argc > i) { 
@@ -91,7 +97,7 @@ int main(int argc, char *argv[])
     }
 
     SetForthOutputStream(cout);
-    int line_num = 0, ec = 0;
+    long int line_num = 0, ec = 0;
     vector<byte> op;
 
     if (pSS) {

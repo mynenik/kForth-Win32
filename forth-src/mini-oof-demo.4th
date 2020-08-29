@@ -7,8 +7,13 @@
 \   create a derived class, override inherited class methods,
 \   and use objects.
 \
+\ Revisions:
 \
-include ans-words
+\   1998-10-24      original code by B. Paysan
+\   2003-02-15      adapted for kForth by K. Myneni
+\   2003-02-27  km  use of new changed in mini-oof.4th
+\   2011-03-03  km  removed include of ans-words.4th, not needed for
+\                     kforth 1.5.x.
 include strings
 include mini-oof
 include ansi

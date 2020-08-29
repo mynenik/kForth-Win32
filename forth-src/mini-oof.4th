@@ -3,19 +3,15 @@
 \ Bernd Paysan's simple object-oriented extensions to ANS Forth, 
 \ adapted to kForth. See: http://www.jwdt.com/~paysan/mini-oof.html
 \
-\ Requires:
-\
-\	strings.4th
-\	ans-words.4th
-\
 \ For example of usage, see mini-oof-demo.4th
 \
 \ Revisions:
 \
-\	1998-10-24 -- original code by B. Paysan
-\	2003-02-15 -- adapted for kForth by K. Myneni
-\	2003-02-27 -- changed definition of new to leave object
-\		        address on stack   km
+\   1998-10-24    original code by B. Paysan
+\   2003-02-15    adapted for kForth by K. Myneni
+\   2003-02-27 km changed definition of new to leave object address on stack
+\   2011-03-03 km removed requirement on strings.4th and ans-words.4th 
+\                   for kForth 1.5.x
 
 : method ( m v -- m' v) 
 	create over 1 cells ?allot ! swap cell+ swap

@@ -25,6 +25,7 @@
 \   RENAME-FILE  ( c-addr1 u1 c-addr2 u2 -- ior ) -- see restrictions
 \   READ-LINE    ( c-addr u1 fd -- u2 flag ior )
 \   WRITE-LINE   ( c-addr u fd -- ior )
+\   FLUSH-FILE   ( fd -- ior )
 \
 \ Copyright (c) 1999--2020 Krishna Myneni
 \
@@ -32,7 +33,7 @@
 \ Public License.
 \
 \ Requires:
-\  ans-words.4th
+\
 \  strings.4th
 \
 
@@ -164,4 +165,9 @@ variable read_count
 	dup >r write-file
 	EOL_BUF 1 r> write-file
 	or ;
+
+\ FLUSH-FILE ( fileid -- ior )
+\ Force any buffered information written to file to be stored on disk.
+\ Forth-94 File Access word set 11.6.2.1560
+: flush-file fsync ;
 

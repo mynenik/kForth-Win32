@@ -1,10 +1,10 @@
 // ForthCompiler.h
 //
-// Copyright (c) 1998--2020 Krishna Myneni
+// Copyright (c) 1998--2020 Krishna Myneni,
 //   <krishna.myneni@ccreweb.org>
 //
-// This software is provided under the terms of the GNU Affero
-// General Public License (AGPL) v 3.0 or later.
+// This software is provided under the terms of the GNU
+// Affero General Public License (AGPL), v3.0 or later.
 //
 
 #ifndef __FORTHCOMPILER_H__
@@ -49,7 +49,7 @@ struct WordTemplate
     byte Precedence;
 };
 
-struct DictionaryEntry
+struct WordListEntry
 {
   char WordName[32];
   word WordCode;
@@ -58,18 +58,39 @@ struct DictionaryEntry
   void* Pfa;
 };
 
+typedef vector<WordListEntry>::iterator  WordIndex;
 
-int IsForthWord (char*, DictionaryEntry*);
-int ForthCompiler (vector<byte>*, int*);
+class WordList : public vector<WordListEntry> 
+{
+public:
+   bool RetrieveFromName( char*, WordListEntry* );
+   bool RetrieveFromCfa( void*, WordListEntry* );
+   WordIndex IndexOf( char* );
+   void RemoveLastWord( void );
+};
+
+class Vocabulary : public WordList
+{
+public:
+   const char* Name;
+   Vocabulary (const char* );
+   int Initialize (WordTemplate [], int);
+};
+
+class SearchList : public vector<Vocabulary*>
+{
+public:
+   bool LocateWord( char*, WordListEntry* );
+   bool LocateCfa( void* cfa, WordListEntry* );
+};
+
+
+bool IsForthWord (char*, WordListEntry*);
+int  ForthCompiler (vector<byte>*, long int*);
+int  ExecutionMethod (int);
+void CompileWord (WordListEntry);
 void OutputForthByteCode (vector<byte>*);
 void SetForthInputStream (istream&);
 void SetForthOutputStream (ostream&);
-
-extern "C" {
-   // Provided by vmc.c
-   char* ExtractName (char*, char*);
-   int IsFloat (char*, double*);
-   int IsInt (char*, int*);
-}
 
 #endif

@@ -11,36 +11,38 @@
 \
 \ Glossary:
 \
-\       SCAN        ( a1 u1 c -- a2 u2 )
-\       SKIP        ( a1 u1 c -- a2 u2 )
+\  	SCAN        ( a1 u1 c -- a2 u2 )
+\ 	SKIP        ( a1 u1 c -- a2 u2 )
 \       REPLACE-CHAR ( a u c1 c2 -- a u )
 \
-\       PARSE_TOKEN ( a u -- a2 u2 a3 u3 )
-\       PARSE_LINE  ( a u -- a1 u1 a2 u2 ... an un n )
-\       PARSE_ARGS  ( a u -- r1 ... rn n )
+\ 	PARSE_TOKEN ( a u -- a2 u2 a3 u3 )
+\ 	PARSE_LINE  ( a u -- a1 u1 a2 u2 ... an un n )
+\ 	PARSE_ARGS  ( a u -- r1 ... rn n )
 \
-\       IS_LC_ALPHA ( c -- b )
-\       ISDIGIT     ( c -- b )
-\       UCASE       ( c1 -- c2 )
+\ 	IS_LC_ALPHA ( c -- b )
+\ 	ISDIGIT     ( c -- b )
+\ 	UCASE       ( c1 -- c2 )
 \
-\       STRCPY      ( ^str a -- )
-\       STRLEN      ( a -- u )
+\ 	STRCPY      ( ^str a -- )
+\ 	STRLEN      ( a -- u )
 \
-\       STRBUFCPY   ( ^str1 -- ^str2 )
-\       STRCAT      ( a1 u1 a2 u2 -- a3 u3 )
-\       STRPCK      ( a u -- ^str )
+\ 	STRBUFCPY   ( ^str1 -- ^str2 )
+\ 	STRCAT      ( a1 u1 a2 u2 -- a3 u3 )
+\ 	STRPCK      ( a u -- ^str )
 \
-\       U>STRING    ( u -- ^str )
-\       UD>STRING   ( ud -- ^str )
-\       S>STRING    ( n -- ^str )
-\       D>STRING    ( d -- ^str )
-\       STRING>S    ( ^str -- n )
+\ 	U>STRING    ( u -- ^str )
+\ 	UD>STRING   ( ud -- ^str )
+\ 	S>STRING    ( n -- ^str )
+\ 	D>STRING    ( d -- ^str )
+\ 	STRING>UD   ( ^str -- ud )
+\ 	STRING>S    ( ^str -- n )
+\ 	STRING>D    ( ^str -- d )
 \
-\       F>STRING    ( r n -- ^str )
-\       F>FPSTR     ( r n -- a u )
-\       F.RD        ( r w n -- )
-\       STRING>F    ( ^str -- r )
-\
+\ 	F>STRING    ( r n -- ^str )
+\ 	F>FPSTR     ( r n -- a u )
+\ 	F.RD        ( r w n -- )
+\ 	STRING>F    ( ^str -- r )
+\ 	
 BASE @
 DECIMAL
 
@@ -48,25 +50,25 @@ DECIMAL
 \   a1 u1 is the string to be searched
 \   a2 u2 is the substring starting with character c
 : scan ( a1 u1 c -- a2 u2 )
-        over 0> IF
-          over 0 DO   \ -- a1 u1 c
-            >r over c@ r@ =
-            IF  r> leave  ELSE  1 /string  r>  THEN
-          LOOP
-        THEN
-        drop ;
+	over 0> IF
+	  over 0 DO   \ -- a1 u1 c
+	    >r over c@ r@ = 
+	    IF  r> leave  ELSE  1 /string  r>  THEN
+	  LOOP
+	THEN
+	drop ;
 
 \ Search for first occurrence of character not equal to c in a string
 \   a1 u1 is the string to be searched,
 \   a2 u2 is the substring starting with char <> c
 : skip ( a1 u1 c -- a2 u2 )
-        over 0> IF
-          over 0 DO  \ -- a1 u1 c
-            >r over c@ r@ <>
-            IF  r> leave  ELSE  1 /string r>  THEN
-          LOOP
-        THEN
-        drop ;
+	over 0> IF
+	  over 0 DO  \ -- a1 u1 c
+	    >r over c@ r@ <> 
+	    IF  r> leave  ELSE  1 /string r>  THEN
+	  LOOP
+	THEN
+	drop ; 
 
 \ Replace char c1 with char c2 in string
 : replace-char ( c-addr u c1 c2 -- c-addr u )
@@ -97,16 +99,16 @@ DECIMAL
 
 \ Return true if c is a lower case alphabetical character
 : is_lc_alpha ( c -- b )
-        [char] a [ char z 1+ ] literal within ;
+	[char] a [ char z 1+ ] literal within ;	
 
-\ Return true if c is ascii value of '0' through '9'
-: isdigit ( n -- flag | return true if n is ascii value of '0' through '9' )
-        [char] 0 [ char 9 1+ ] literal within ;
+\ Return true if c is ascii value of '0' through '9'	
+: isdigit ( c -- b )
+	[char] 0 [ char 9 1+ ] literal within ;
 
 \ Change alphabet character to upper case
 : ucase ( c1 -- c2 )
-        dup [CHAR] a [ CHAR z 1+ ] literal within
-        IF 95 and THEN ;
+	dup [CHAR] a [ CHAR z 1+ ] literal within
+	IF 95 and THEN ;
 
 \ Copy a counted string to address a
 : strcpy ( ^str a -- )
@@ -114,11 +116,11 @@ DECIMAL
 
 \ Length of a null-terminated string
 : strlen ( addr -- u )
-        0
-        BEGIN over c@
-        WHILE 1+ >r 1+ r>
-        REPEAT
-        nip ;
+	0
+	BEGIN over c@
+	WHILE 1+ >r 1+ r>
+	REPEAT
+	nip ;
 
 \ Circular String Buffer
 
@@ -175,23 +177,31 @@ string_buf str_buf_ptr !
 
 \ Return counted string representing ud in base 10
 : ud>string ( ud -- ^str )
-	base @ >r decimal <# #s #> strpck r> base ! ;
+    base @ >r decimal <# #s #> strpck r> base ! ;
+
+\ Convert counted string to unsigned double in base 10
+: string>ud ( ^str -- ud )
+    count base @ >r decimal 0 0 2swap >number 2drop r> base ! ;
 
 \ Return counted string representing d in base 10
 : d>string ( d -- ^str )
     dup >r dabs ud>string r> 
-    0< IF s" -" rot count strcat strpck THEN ;
+	0< IF s" -" rot count strcat strpck THEN ;
+
+\ Convert counted string to signed double in base 10
+: string>d ( ^str -- d )
+    base @ >r decimal number? drop r> base ! ;
 
 \ Return counted string representing n in  base 10
 : s>string ( n -- ^str )
-    dup >r abs u>string r> 0< IF
+    dup >r abs u>string r> 0< IF 
 	  s" -" rot count strcat strpck
     THEN ;
 
-variable number_sign
-variable number_val
+variable  number_sign
+variable  number_val
 
-\ Convert counted string to signed integer in base 10
+\ Convert counted string to signed integer in base 10 
 : string>s ( ^str -- n )
 	0 number_val !
 	false number_sign !
@@ -199,7 +209,7 @@ variable number_val
 	0 ?DO
 	  dup c@
 	  case
-	    [char] -  of true number_sign ! endof 
+	    [char] -  of true  number_sign ! endof 
 	    [char] +  of false number_sign ! endof 
 	    dup isdigit 
 	    IF
@@ -233,18 +243,18 @@ variable number_val
       dup 0> IF spaces ELSE drop THEN type
     THEN ;
 
-create   fnumber_buf 64 allot
-variable fnumber_sign
-variable fnumber_power
-variable fnumber_digits
+create    fnumber_buf 64 allot
+variable  fnumber_sign
+variable  fnumber_power
+variable  fnumber_digits
 
 \ Convert r to a counted string in scientific notation
 \ with n decimal places
-: f>string ( f n -- ^str )
+: f>string ( r n -- ^str )
 	>r 
 	fdup f0= IF
 	  f>d <# r> 0 ?do # loop #> s" e0" strcat 
-	  s"  0." 2swap strcat strpck exit	  
+	  s"  0." 2swap strcat strpck EXIT	  
 	THEN
 	r>
 	dup 16 swap u< IF drop fdrop c" ******" exit THEN  \ test for invalid n
@@ -271,7 +281,7 @@ variable fnumber_digits
 	f* floor f>d d>string
 	count drop dup fnumber_buf
 	fnumber_sign @ 
-	if [char] - else bl then 
+	IF [char] - ELSE bl THEN 
 	swap c!
 	fnumber_buf 1+ 1 cmove
 	1+
@@ -282,62 +292,11 @@ variable fnumber_digits
 	fnumber_power @ s>string count strcat
 	strpck 	;
 
-
-32 constant NUMBER_BUF_LEN
-create number_buf NUMBER_BUF_LEN allot
-fvariable fnumber_val
-fvariable fnumber_divisor
-variable  fnumber_whole_part
-variable  number_count
-
-: string>f ( ^str -- f )
-	true fnumber_whole_part !
-	0e fnumber_val f!
-	1e fnumber_divisor f!
-	false fnumber_sign !
-	count 2dup + 1- nip swap
-	begin
-	  dup c@
-	  case  
-	    [char] - of true  fnumber_sign ! endof
-	    [char] + of false fnumber_sign ! endof
-	    [char] . of false fnumber_whole_part ! endof
-	    dup isdigit
-	    if  
-	      dup [char] 0 - s>f
-	      fnumber_whole_part @
-	      if
-	        fnumber_val f@ 10e f*
-	      else
-	        fnumber_divisor f@ 10e f*
-	        fdup fnumber_divisor f!
-	        f/ fnumber_val f@
-	      then
-	      f+ fnumber_val f!
-	    else
-	      dup dup [char] E = swap [char] e = or
-	      if
-	        drop 2dup
-		- 
-	        dup 0>
-	        if
-	          number_buf c!
-	          dup 1+ number_buf 1+ number_buf c@ cmove
-	          2drop
-	          number_buf string>s s>f 10e fswap f**
-	        else
-	          drop 2drop 1e
-	        then
-	        fnumber_val f@ f* fnumber_sign @ if fnegate then
-	        exit
-	      then
-	    then
-	  endcase
-	  1+ 2dup <
-	until	              
-	2drop
-	fnumber_val f@ 
-	fnumber_sign @ if fnegate then ;	 
+0e 0e f/ fconstant NAN
+	 
+: string>f ( ^str -- r )
+    count bl skip base @ >r decimal >float 
+    0= IF NAN THEN r> base ! ;
 
 \ Parse a string delimited by spaces into fp numbers
 : parse_args ( a u -- r1 ... rn n )
@@ -350,7 +309,7 @@ variable  number_count
 	  2dup 
 	  bl scan 2>r
 	  r@ - dup 0= 
-	  if drop r> 0 >r then
+	  IF drop r> 0 >r THEN
 	  strpck string>f
 	  2r> r> 
 	  1+ >r 2>r
@@ -358,3 +317,4 @@ variable  number_count
 	2r> 2drop r> ;
 
 BASE !
+

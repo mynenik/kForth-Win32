@@ -39,7 +39,7 @@
 \
 \ =======  kForth requires =======================
 \ include ans-words  ( commented out here, but include in main program file)
-: floats dfloats ;
+[undefined] floats [if] : floats dfloats ; [then]
 : aligned  ( n -- m ) dup 0> if 1- 1 cells / 1+ cells else drop 0 then ;  
 : faligned ( n -- m ) dup 0> if 1- 1 floats / 1+ floats else drop 0 then ;
 : dfaligned  faligned ;
@@ -103,8 +103,9 @@ cell% 2*              2constant double%
 : %allot ( align size -- addr )
     tuck %align ( here swap) ?allot ;
 
-\ : %allocate ( align size -- addr ior )
-\    nip allocate ;
+: %allocate ( align size -- addr ior )
+    nip allocate ;
 
-\ : %alloc ( size align -- addr )
-\    %allocate throw ;
+: %alloc ( size align -- addr )
+    %allocate throw ;
+
