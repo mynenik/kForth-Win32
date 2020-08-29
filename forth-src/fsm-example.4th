@@ -16,10 +16,9 @@
 \   2010-05-24  km; include fsm code from fsm2.4th
 \   2011-03-06  km; added Requires: comments.
 \
-include ans-words.4th
-include fsm2.4th
+
 \ The defining words for creating state machines
-\ [undefined] fsm: [IF]  s" fsm2.4th" included  [THEN]
+[undefined] fsm: [IF]  s" fsm2.4th" included  [THEN]
 
 \ Fixed point number entry example of a finite state machine
 \   ( from Noble in J. Forth Appl. and Res.)

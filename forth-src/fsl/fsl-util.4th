@@ -1,26 +1,35 @@
-\ fsl-util.4th   	An auxiliary file for the Forth Scientific Library
-\                       Adapted for kForth (km 2003-03-18)
+\ fsl-util.4th
 \
-\                       contains commonly needed definitions.
-\ dxor, dor, dand       double xor, or, and
-\ sd*                   single * double = double_product
-\ v: defines use( &     For defining and settting execution vectors
-\ %                     Parse next token as a FLOAT
-\ S>F  F>S              Conversion between (single) integer and float
-\ F,                    Store FLOAT at (aligned) HERE
-\ F=                    Test for floating point equality
-\ -FROT                 Reverse the effect of FROT
-\ F2*  F2/              Multiply and divide float by two
-\ F2DUP                 FDUP two floats
-\ F2DROP                FDROP two floats
-\ INTEGER, DOUBLE, FLOAT   For setting up ARRAY types
+\ An auxiliary file for the Forth Scientific Library
+\ For kForth
+\
+\ Contains commonly needed definitions for the FSL modules.
+
+\
+\ dxor, dor, dand           double xor, or, and
+\ sd*                       single * double = double_product
+\ v: defines use( &         For defining and settting execution vectors
+\ %                         Parse next token as a FLOAT
+\ S>F  F>S                  Conversion between (single) integer and float
+\ F,                        Store FLOAT at (aligned) HERE
+\ F=                        Test for floating point equality
+\ -FROT                     Reverse the effect of FROT
+\ F2*  F2/                  Multiply and divide float by two
+\ F2DUP                     FDUP two floats
+\ F2DROP                    FDROP two floats
+\ INTEGER, DOUBLE, FLOAT    For setting up ARRAY types
 \ ARRAY DARRAY              For declaring static and dynamic arrays
 \ }                         For getting an ARRAY or DARRAY element address
 \ &!                        For storing ARRAY aliases in a DARRAY
 \ PRINT-WIDTH               The number of elements per line for printing arrays
 \ }FPRINT                   Print out a given array
+\ }FCOPY
+\ }FPUT
 \ Matrix                    For declaring a 2-D array
 \ }}                        gets a Matrix element address
+\ }}FPRINT
+\ }}FCOPY
+\ }}FPUT
 \ Public: Private: Reset_Search_Order   controls the visibility of words
 \ frame| |frame             sets up/removes a local variable frame
 \ a b c d e f g h           local FVARIABLE values
@@ -33,21 +42,47 @@
 \          for ThisForth in the file umd.fo
 
 \ This code is released to the public domain Everett Carter July 1994
-
-CR .( FSL-UTIL          V1.15           7 October 1995   EFC )
-
+\
+\ Revisions:
+\   1996-06-12  efc; Revision 1.17
+\   2003-03-18  km;  Adapted for kForth
+\   2003-11-16  km;  Fixed bug in }}, added }}FCOPY
+\   2005-09-18  km;  Added }FPUT and }}FPUT, [DEFINED] and [UNDEFINED]
+\   2005-09-19  km;  Removed DEFINED and ~DEFINED; moved [DEFINED] to ans-words.4th
+\   2005-09-28  km;  Moved [UNDEFINED] to ans-words.4th
+\   2006-10-31  km;  added PTR  (since it is widely used in kForth FSL routines)
+\   2007-10-31  km;  revised implementation of floating point locals to work with
+\                    kForth; implementation is not fully tested, and it is not
+\                    loaded by default.
+\   2008-03-08  km;  revised implementation of "}" and "}}" for higher efficiency.
+\   2008-07-04  km;  removed defn of FLITERAL; intrinsic in kForth v >= 1.4.2
+\   2009-10-06  km;  removed conditional defn of FLOATS; intrinsic in kFORTH v 1.5.x
+\   2010-04-29  km;  uncommented search order control words for kForth v 1.5.x;
+\                      also made defn of F2DROP conditional
+\   2011-09-16  km;  commented out the original FSL code and data hiding
+\                      mechanism in favor of Neal Bridges' anonymous module
+\                      methods; requires revision of FSL modules.
+\   2011-10-11  km;  replace Neal Bridges' modules.4th with KM's version
+\                      of DNW's root-module.fs: modules.4th. No further revisions 
+\                      needed to the FSL modules with this change.
+\   2012-02-19  km;  we are now using the modules library of KM and DNW,
+\                    modules.fs; see "A Forth Modules System with Name
+\                    Reuse".
+\   2017-05-03  km;  ARRAY now gives warning when creating zero length arrays,
+\                    and aborts for negative array lengths. MATRIX now gives
+\                    warning when creating matrix with zero number of rows and/or
+\                    zero number of columns, and aborts for negative row or
+\                    column count.
+\   2017-05-19  km;  add the constant DFLOAT which has the value 1 DFLOATS.
+\   2019-10-29  km;  conditional def. of F2DUP (intrinsic to some Forths).
 \ ================= kForth specific defs/notes ==============================
-\ This file requires that ans-words.4th be included
+\ Requires ans-words.4th
 
-: FLITERAL ( f -- ) SWAP POSTPONE LITERAL POSTPONE LITERAL ; IMMEDIATE
-: FLOATS DFLOATS ;
-: FLOAT 1 DFLOATS ;
-
-: Reset-Search-Order ;
-: Public: ;
-: Private: ;
-
+[undefined] ptr [IF] : ptr create 1 cells ?allot ! does> a@ ; [THEN]
 \ ================= end of kForth specific defs ==============================
+
+CR .( FSL-UTIL          V1.21          29 October 2019   EFC, KM )
+BASE @ DECIMAL
 
 \ ================= compilation control ======================================
 
@@ -57,27 +92,18 @@ FALSE VALUE ?TEST-CODE           \ obsolete, for backward compatibility
 
 
 \ for control of conditional compilation of Dynamic memory
-FALSE CONSTANT HAS-MEMORY-WORDS?
+TRUE CONSTANT HAS-MEMORY-WORDS?
 
 \ =============================================================================
 
-
-
 \ FSL NonANS words
 
-: DEFINED   ( c-addr -- t/f )    \ returns definition status of
-      FIND SWAP DROP             \ a word
-;
+[undefined] s>f [IF] : s>f    S>D D>F ;  [THEN]
 
-: ~DEFINED   ( c-addr -- t/f )    \ returns definition status of
-      DEFINED 0=                  \ a word
-;
+\ The following has been superceded by use of KM's modules.4th
 
-
-\ : S>F    S>D D>F ;
-
-(
-WORDLIST CONSTANT hidden-wordlist
+0 [IF]    \ original FSL private wordlist methods
+WORDLIST ptr hidden-wordlist
 
 : Reset-Search-Order
 	FORTH-WORDLIST 1 SET-ORDER
@@ -95,13 +121,14 @@ WORDLIST CONSTANT hidden-wordlist
 ;
 
 : Reset_Search_Order   Reset-Search-Order ;     \ these are
-: reset-search-order   Reset-Search-Order ;	\ for backward compatibility
-: private:             Private: ;
-: public:              Public:  ;
-)
+\ : reset-search-order   Reset-Search-Order ;	\ for backward compatibility
+\ : private:             Private: ;
+\ : public:              Public:  ;
+[ELSE]
+\ Use KM/DNW's modules interface
+[undefined] begin-module [IF] s" modules.4th" included [THEN]
 
-: Reset_Search_Order   Reset-Search-Order ;
-
+[THEN]
 
 CREATE fsl-pad	84 CHARS ( or more ) ALLOT
 
@@ -152,8 +179,11 @@ TRUE  VALUE is-static?     \ TRUE for statically allocated structs and arrays
 \ size of a double integer
 2 CELLS CONSTANT DOUBLE
 
-\ size of a regular float
+\ size of a default float
 1 FLOATS CONSTANT FLOAT
+
+\ size of an IEEE double-precision float
+1 DFLOATS CONSTANT DFLOAT
 
 \ size of a pointer (for readability)
 1 CELLS CONSTANT POINTER
@@ -164,13 +194,13 @@ TRUE  VALUE is-static?     \ TRUE for statically allocated structs and arrays
 : -FROT    FROT FROT ;
 : F2*   2.0e0 F*     ;
 : F2/   2.0e0 F/     ;
-: F2DUP     FOVER FOVER ;
-: F2DROP    FDROP FDROP ;
+[undefined] F2DUP  [IF] : F2DUP     FOVER FOVER ; [THEN]
+[undefined] F2DROP [IF] : F2DROP    FDROP FDROP ; [THEN]
 
 \ : F,   HERE FALIGN 1 FLOATS ALLOT F! ;
 \ 3.1415926536E0 FCONSTANT PI
-
--1E FACOS FCONSTANT PI
+[undefined] PI [IF] -1E FACOS FCONSTANT PI [THEN]
+1.0E0 FCONSTANT F1.0
 
 \ 1-D array definition
 \    -----------------------------
@@ -198,7 +228,10 @@ TRUE  VALUE is-static?     \ TRUE for statically allocated structs and arrays
      DOES> DUP @ SWAP [ 2 CELLS ] LITERAL +
 ;
 
-: ARRAY
+
+: ARRAY ( n cell_size -- )  \ n >= 0
+     OVER 0= IF cr ." WARNING: Creating zero length array!" THEN
+     OVER 0< ABORT" Negative array length!"
      STRUCT-ARRAY? IF   SARRAY FALSE TO STRUCT-ARRAY?
                    ELSE MARRAY
                    THEN
@@ -254,9 +287,7 @@ TRUE  VALUE is-static?     \ TRUE for statically allocated structs and arrays
 
 
 : }   ( addr n -- addr[n])       \ word that fetches 1-D array addresses
-          OVER CELL-  @
-          * SWAP +
-;
+    OVER [ 1 CELLS ] LITERAL - @ * + ;
 
 VARIABLE print-width      6 print-width !
 
@@ -275,6 +306,10 @@ VARIABLE print-width      6 print-width !
 : }fcopy ( 'src 'dest n -- )         \ copy one array into another
      >R SWAP R>
      0 ?DO  2DUP I } F@ ROT I } F!  LOOP  2DROP ;
+
+: }fput ( r1 ... r_n n 'a -- | store r1 ... r_n into array of size n )
+     SWAP DUP 0 ?DO  1- 2DUP 2>R } F! 2R>  LOOP  2DROP ;
+
 
 \ 2-D array definition,
 
@@ -310,6 +345,11 @@ VARIABLE print-width      6 print-width !
 
 
 : MATRIX  ( n m size -- )           \ defining word for a 2-d matrix
+     >r 2dup 0= swap 0= or IF 
+       ." WARNING: Creating matrix with zero rows or zero columns!"
+     THEN 
+     2dup 0< swap 0< or ABORT" Negative row or column count!"
+     r>
      STRUCT-ARRAY? IF   SMATRIX FALSE TO STRUCT-ARRAY?
                    ELSE MMATRIX
                    THEN
@@ -321,10 +361,9 @@ VARIABLE print-width      6 print-width !
 
 
 : }}    ( addr i j -- addr[i][j] )    \ word to fetch 2-D array addresses
-               2>R                    \ indices to return stack temporarily
-               DUP CELL- CELL- 2@     \ &a[0][0] size m
-               R> * R> + *
-               +
+  	>R >R
+        DUP [ 2 CELLS ] LITERAL - 2@     \ &a[0][0] size m
+        R> * R> + * +
 
 ;
 
@@ -340,18 +379,34 @@ VARIABLE print-width      6 print-width !
         2DROP
 ;
 
+: }}fcopy ( 'src 'dest n m  -- )      \ copy n m elements of 2-D array src to dest
+        SWAP 0 DO
+                 DUP 0 DO
+                            2 PICK J I  }} F@
+                            3 PICK J I  }} F!
+                        LOOP
+                  LOOP
+        DROP 2DROP
+;
+
+: }}fput ( r11 r12 ... r_nm  n m 'A -- | store r11 ... r_nm into nxm matrix )
+      -ROT 2DUP * >R 1- SWAP 1- SWAP }} R> 
+      0 ?DO  DUP >R F! R> FLOAT -  LOOP  DROP ;
 
 \ function vector definition
+\
+\ V: and DEFINES  are obsolete since Forth now has the common words
+\ DEFER and IS for this purpose. In kForth, DEFER and IS are provided
+\ by ans-words.4th 
 
 : noop ; 
 
-: v: CREATE 1 CELLS ?ALLOT ['] noop SWAP ! DOES> a@ EXECUTE ;
-: defines   ' >BODY STATE @ IF POSTPONE LITERAL POSTPONE !
-                            ELSE ! THEN ;   IMMEDIATE
+\ : v: CREATE 1 CELLS ?ALLOT ['] noop SWAP ! DOES> a@ EXECUTE ;
+\ : defines   ' >BODY STATE @ IF POSTPONE LITERAL POSTPONE !
+\                            ELSE ! THEN ;   IMMEDIATE
 
 : use(  STATE @ IF POSTPONE ['] ELSE ' THEN ;  IMMEDIATE
 : &     POSTPONE use( ; IMMEDIATE
-
 
 
 (
@@ -369,38 +424,63 @@ VARIABLE print-width      6 print-width !
   PS: Don't forget to use |FRAME before an EXIT .
 )
 
+\ Don't load flocals implementation by default.
+\ The user can alter the statement below if desired.
+0 [IF]    
+    
+0 ptr frame-ptr
 8 CONSTANT /flocals
+0 value flocal_cnt
 
-\ : (frame) ( n -- ) FLOATS ALLOT ;
-\
-\ : FRAME|
-\        0 >R
-\        BEGIN   BL WORD  COUNT  1 =
-\                SWAP C@  [CHAR] | =
-\                AND 0=
-\        WHILE   POSTPONE F, R> 1+ >R
-\        REPEAT
-\        /FLOCALS R> - DUP 0< ABORT" too many flocals"
-\        POSTPONE LITERAL  POSTPONE (frame) ; IMMEDIATE
-\
-\ : |FRAME ( -- ) [ /FLOCALS NEGATE ] LITERAL (FRAME) ;
-\
-\ : &h		  HERE [ 1 FLOATS ] LITERAL - ;
-\ : &g            HERE [ 2 FLOATS ] LITERAL - ;
-\ : &f            HERE [ 3 FLOATS ] LITERAL - ;
-\ : &e            HERE [ 4 FLOATS ] LITERAL - ;
-\ : &d            HERE [ 5 FLOATS ] LITERAL - ;
-\ : &c            HERE [ 6 FLOATS ] LITERAL - ;
-\ : &b            HERE [ 7 FLOATS ] LITERAL - ;
-\ : &a            HERE [ 8 FLOATS ] LITERAL - ;
-\
-\
-\ : a             &a F@ ;
-\ : b             &b F@ ;
-\ : c             &c F@ ;
-\ : d             &d F@ ;
-\ : e             &e F@ ;
-\ : f             &f F@ ;
-\ : g             &g F@ ;
-\ : h             &h F@ ;
+: (frame-alloc) ( -- ptr )
+    frame-ptr  R> SWAP >R >R  \ save current frame pointer
+    /flocals FLOATS ALLOCATE ABORT" Unable to allocate frame"
+    TO frame-ptr
+    0 TO flocal_cnt ;
 
+: (frame) ( n -- )
+    drop ;
+
+: F, ( f -- )
+    frame-ptr flocal_cnt FLOATS + F!
+    flocal_cnt 1+ TO flocal_cnt
+;
+
+: FRAME| ( -- )
+    POSTPONE (frame-alloc)    \ In kForth, we must allocate beforehand
+
+    0 >R
+    BEGIN   BL WORD  COUNT  1 =
+	    SWAP C@  [CHAR] | =
+	    AND 0= 
+    WHILE   POSTPONE F,  R> 1+ >R
+    REPEAT
+    /flocals R> - DUP 0< ABORT" too many flocals"
+    POSTPONE LITERAL  POSTPONE (frame) ; IMMEDIATE
+
+: |FRAME ( -- )
+    frame-ptr FREE drop
+    R> R> TO frame-ptr >R   \ restore previous frame pointer
+;
+
+: &a  frame-ptr ;
+: &b  frame-ptr [ 1 FLOATS ] LITERAL + ;
+: &c  frame-ptr [ 2 FLOATS ] LITERAL + ;
+: &d  frame-ptr [ 3 FLOATS ] LITERAL + ;
+: &e  frame-ptr [ 4 FLOATS ] LITERAL + ;
+: &f  frame-ptr [ 5 FLOATS ] LITERAL + ;
+: &g  frame-ptr [ 6 FLOATS ] LITERAL + ;
+: &h  frame-ptr [ 7 FLOATS ] LITERAL + ;
+
+: a   &a F@ ;
+: b   &b F@ ;
+: c   &c F@ ;
+: d   &d F@ ;
+: e   &e F@ ;
+: f   &f F@ ;
+: g   &g F@ ;
+: h   &h F@ ;
+
+[THEN]
+
+BASE !

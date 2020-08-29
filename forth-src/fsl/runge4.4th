@@ -49,29 +49,36 @@
 \      7. The compilation of the test code is controlled by the VALUE
 \         TEST-CODE? and the conditional compilation words in the
 \          Programming-Tools wordset.
-\  N/A 8. To run the code the fp stack needs to be at least 5 deep.
+\      8. To run the code the fp stack needs to be at least 5 deep.
 \	  To run all examples you need 7 positions on the fp stack.
 \
 \     (c) Copyright 1994  Everett F. Carter.     Permission is granted
 \     by the author to use this software for any application provided
 \     this copyright notice is preserved.
 
-\ (The adaptive code was contributed by Marcel Hendrix)
-\ (The integrated fp/data stack modifications are by Krishna Myneni, 2003-3-18)
+\  Revisions:
+\     ?           mh; adaptive code was contributed by Marcel Hendrix
 \
-\ kForth requires:
-\
-\	ans-words.4th
-\	fsl-util.4th
-\	dynmem.4th
+\     2007-09-23  km; added automated testing and a few of the Enright
+\                     and Pryce test cases (see notes in test sec.).
+\     2007-09-24  km; changed some "}t" to "r}t" tests for consistency with
+\                     unified stack systems.
+\     2007-09-27  km; cleaned up the test code, using a consistent format for
+\                     both the E&P and non E&P tests; renamed rksolve1 and
+\                     rksolve2 to )rksolve1 and )rksolve2 for better syntax,
+\                     and added )rk_fixed1 and )rk_fixed2 wrappers for the
+\                     fixed step size tests.
+\     2007-10-27  km; save base, switch to decimal, and restore base
+\     2011-09-16  km; use Neal Bridges' anonymous modules.
+\     2012-02-19  km; use KM/DNW's modules library
+CR .( RUNGE4            V1.2f         19 February  2012   EFC )
+BEGIN-MODULE
 
-CR .( RUNGE4            V1.2          15 November 1994   EFC )
-
-
+BASE @ DECIMAL
 
 Private:
 
-v: dsdt()                     \ pointer to user function t, u, dudt
+Defer dsdt()                     \ pointer to user function t, u, dudt
 
 FLOAT DARRAY dum{             \ scratch space
 FLOAT DARRAY dut{
@@ -90,7 +97,7 @@ Public:
 
 : )runge_kutta4_init ( &dsdt n -- )
      TO dim
-     defines dsdt()
+     is dsdt()
 
 
      & dum{ dim }malloc
@@ -269,7 +276,259 @@ Public:
 	maxstep F@ FMIN		\ but don't grow excessively!
 	FSWAP TRUE 4th->5th ;
 
+BASE !
+END-MODULE
+    
+TEST-CODE? [IF]     \ test code ==========================================
+[undefined] T{      [IF]  include ttester.4th  [THEN]
+BASE @ DECIMAL
+
+\ Generic Test Wrappers for the Adaptive and Fixed Step Solvers
+
+3 FLOAT ARRAY x{
+
+FVARIABLE  _dt
+FVARIABLE  t_end
+FVARIABLE  t_final
+
+\ Generic one equation ODE solver (adaptive step size)
+FVARIABLE t_start
+: )rksolve1 ( 'dsdt tstart tend y0 -- r )
+    x{ 0 } F! t_end F! t_start F! >R
+    _dt F@ rel-near F@ R> 1 x{ )rk4qc_init
+    _dt F@ t_start F@ BEGIN  rk4qc_step 0= >R FDUP t_end F@ F>= R> OR UNTIL
+    t_final F! FDROP  rk4qc_done  x{ 0 } F@   
+;
+
+\ Generic two equations ODE solver (adaptive step size)
+: )rksolve2 ( 'dsdt tstart tend x0 y0 -- r )
+    x{ 1 } F! x{ 0 } F! t_end F! t_start F! >R
+    _dt F@ rel-near F@ R> 2 x{ )rk4qc_init
+    _dt F@ t_start F@ BEGIN  rk4qc_step 0= >R FDUP t_end F@ F>= R> OR UNTIL
+    t_final F! FDROP  rk4qc_done  x{ 0 } F@   
+;
+
+\ Generic one equation ODE solver (fixed step size)
+: )rk_fixed1 ( 'dsdt nsteps tstart y0 -- r ) 
+    x{ 0 } F! t_start F!
+    SWAP 1 )runge_kutta4_init >R
+    t_start F@ _dt F@ x{ R> runge_kutta4_integrate()
+    t_final F! runge_kutta4_done  x{ 0 } F@   
+;
+
+\ Generic two equations ODE solver (fixed step size)
+: )rk_fixed2 ( 'dsdt nsteps tstart x0 y0 -- r )
+    x{ 1 } F! x{ 0 } F! t_start F!
+    SWAP 2 )runge_kutta4_init >R
+    t_start F@ _dt F@ x{ R> runge_kutta4_integrate()
+    t_final F! runge_kutta4_done  x{ 0 } F@   
+;
+
+\ The test cases here were originally given by Wayne Enright and John Pryce,
+\ Algorithm 648, ACM Transactions on Mathematical Software, volume 13, no. 1,
+\ pp 28--34, 1987.
+\
+\ Also, see
+\
+\ http://people.scs.fsu.edu/~burkardt/f_src/test_ode/test_ode.html
+
+\ E & P nonstiff problem #A1:
+\ dy/dt = -y
+\ y(0) = 1
+\ Exact solution is y(t) = exp(-t)
+: derivs-A1() ( t 'u 'dudt -- )
+    >R 0 } F@  FNEGATE R> 0 } F! FDROP ;
+
+: A1 ( t -- r ) FNEGATE FEXP ;
+
+\ E & P nonstiff problem #A2:
+\ dy/dt = -(y^3)/2
+\ y(0) = 1
+\ Exact solution is y(t) = 1 / sqrt(t + 1)
+: derivs-A2() ( t 'u 'dudt -- )
+    >R 0 } F@ FDUP FDUP F* F* FNEGATE 2e F/ R> 0 } F! FDROP ;
+
+: A2 ( t -- r )
+    1e F+ FSQRT 1e FSWAP F/ ;
+
+\ E & P nonstiff problem #A3:
+\ dy/dt = cos(t) * y
+\ y(0) = 1
+\ Exact solution is y(t) = exp( sin( t ) )
+: derivs-A3() ( t 'u 'dudt -- )
+    >R 0 } F@ FSWAP FCOS F* R> 0 } F! ;
+
+: A3 ( t -- r )
+    FSIN FEXP ;
+
+\ E & P nonstiff problem #A4:
+\ dy/dt = y*(20 - y)/80
+\ y(0) = 1
+\ Exact solution is y(t) = 20 / ( 1 + 19*exp( -t / 4 ) )
+: derivs-A4() ( t 'u 'dudt -- ) 
+    >R 0 } F@ FDUP 20e FSWAP F- F* 80e F/ R> 0 } F! FDROP ;
+
+: A4 ( t -- r )
+    FNEGATE 4e F/ FEXP 19e F* 1e F+ 20e FSWAP F/ ;
+
+\ E & P nonstiff problem #A5:
+\ dy/dt = (y - t)/(y + t)
+\ y(0) = 1
+\ Exact solution is
+\      r = sqrt ( t + y(t)**2 )
+\      theta = atan ( y(t) / t )
+\
+\      r = 4 * exp ( pi/2 - theta )
+
+: derivs-A5() ( t 'u 'dudt -- )
+    >R >R FDUP R> 0 } F@ FDUP FROT F- 2>R F+ 2R> F/ R> 0 } F! ;
+
+FVARIABLE r
+FVARIABLE theta
+: A5 ( t -- r )
+    ;
+
+\ ------- Other test cases (not from E & P) ------------
+    
+\ The RC discharge equation:
+\ dVc/dt = (1/tau)*(Vin-Vc)
+\ Vc(0) = 0
+\ Exact solution is Vc(t) = Vin*( 1 - exp( -t/tau ) )
+\ Comments: Don't use the long-time limit solution for accuracy
+\   testing, since there is an attracting fixed-point at Vc = Vin.
+100E-3  FCONSTANT tau ( tau = R*C; 100 ms for this example)
+10E     FCONSTANT Vin ( charging voltage source is 10 Volts)	
+
+: derivs-Vc() ( t 'u 'dudt -- ) 
+    >R >R FDROP
+    Vin  R> 0 } F@ F-   tau F/  R>  0 } F! ;
+
+: VC ( t -- v )
+    1e  FSWAP FNEGATE tau F/ FEXP  F-  Vin F* ; 
+
+\ Damped vibrations:
+\ u'' + cm*u' + km*u = 0
+\ or  du/dt = v,  dv/dt = -cm*v - km*u
+\ u(0) = 1/{2*pi}
+\ v(0) = -cm/{4*pi}
+\ Exact solution for u(t) is:
+\ u(t) = (1/2pi)*exp{-cm*t/2}*cos(sqrt{km - cm^2/4}*t)
+\ Comments: Don't use the long-time limit solution for accuracy
+\   testing, since there is an attracting fixed-point at u = 0.
+1.0E0 FATAN 8.0E0 F* FCONSTANT PI*2
+
+1.92E0  FCONSTANT cm
+960.0E0 FCONSTANT km
+    
+1e PI*2 F/ FCONSTANT u0
+cm FNEGATE F2/ PI*2 F/ FCONSTANT v0
+
+: derivs-DV() ( t 'u 'dudt -- ) 
+    >R >R FDROP     \ does not use t
+    R@ 1 } F@ 2R@ DROP 0 } F!
+    R@ 1 } F@ cm  F*
+    R> 0 } F@ km  F* F+ FNEGATE
+    R> 1 } F!   
+;
+
+: DV ( t -- a )             \ just the U value not V for damped vib.
+    cm FOVER F* F2/ FNEGATE FEXP
+    FSWAP
+    cm cm F* 4.0E0 F/ FNEGATE km F+ FSQRT
+    F* FCOS
+    F* PI*2 F/
+;
+
+\ Lorenz equations for chaos:
+\ dx/dt = sig * (y - x)
+\ dy/dt = r * x - y - x * z
+\ dz/dt = -bp * z + x * y
+\ Exact solution: NONE
+\ Comments: Since chaotic equations are extremely sensitive to
+\   initial conditions, the result after integration will
+\   depend very sensitively on the precision of the input values
+\   x(t0), y(t0), and z(t0), and on the precision with which
+\   floating point calculations are performed. Such sensitivity is
+\   not useful for directly testing the accuracy of a portable ODE
+\   solver; however, some invariant properties of the attractor can
+\   be computed from the solution, and may possibly serve as suitable
+\   tests of the ODE solver. 
+16.0E0  FCONSTANT sig
+45.92E0 FCONSTANT r
+4.0E0   FCONSTANT bp
+
+: derivs-LE() ( t 'u 'dudt -- ) 
+       2SWAP FDROP     \ does not use t
+
+       >R	\ 'u
+       DUP DUP 1 } F@ ROT 0 } F@ F- sig F*
+       R@ 0 } F!
+
+       DUP 2DUP 2 } F@ FNEGATE r F+
+       ROT      0 } F@ F*
+       ROT      1 } F@ F-
+       R@ 1 } F!
+
+       DUP 2DUP 0 } F@ ROT 1 } F@ F* ROT 2 } F@ bp F* F-
+       R> 2 } F!
+       DROP   
+;
 
 
-Reset_Search_Order
+\ ----- Begin Testing --------------------
+
+1.0E-2 _dt F!
+
+
+1e-13 rel-near F!  \ <-- tests pass at 1e-14 in Gforth
+1e-13 abs-near F!
+set-near    
+
+CR
+TESTING E&P Non-Stiff ODE Problems A1 to A4 (Adaptive Step)
+t{ use( derivs-A1() 0e 20e 1e )rksolve1  ->  t_final F@ A1  r}t
+t{ use( derivs-A2() 0e 20e 1e )rksolve1  ->  t_final F@ A2  r}t
+t{ use( derivs-A3() 0e 20e 1e )rksolve1  ->  t_final F@ A3  r}t
+t{ use( derivs-A4() 0e 20e 1e )rksolve1  ->  t_final F@ A4  r}t
+\ t{ use( derivs-A5() 0e 20e 1e )rksolve1  ->  t_final F@ A5  r}t
+
+\ Non E&P Problems
+TESTING Damped Vibration (Adaptive Step)
+t{ use( derivs-DV() 0e 0.8e u0 v0  )rksolve2  ->  t_final F@ DV  r}t
+
+TESTING Charging Capacitor (Adaptive Step)
+t{ use(  derivs-Vc() 0e 200e-3 0e  )rksolve1  ->  t_final F@ Vc  r}t
+
+
+\ Tests Using Fixed Step Solver
+\ Set relatively low accuracy since our time step _dt is coarse.
+1e-4 rel-near F!   
+1e-4 abs-near F!
+
+TESTING Damped Vibration (Fixed Step)
+t{ use(  derivs-DV() 80 0e u0 v0  )rk_fixed2  ->  t_final F@ DV  r}t
+
+TESTING Charging Capacitor (Fixed Step)
+t{ use(  derivs-Vc() 4  0e 0e  )rk_fixed1  ->  t_final F@ Vc  r}t
+
+
+0 [IF]
+\ see comments for the Lorenz equations, above -- km 2007-09-27
+    
+: lorenz_test ( n -- )               \ n is the number of time steps to run
+
+    0.0E0 x{ 0 } F!   1.0E0 x{ 1 } F!   0.0E0 x{ 2 } F!     
+    use( derivs-LE() 3 )runge_kutta4_init
+    0.0E0       \ initial time
+          
+    ROT 0 DO
+	x{ 1 dt runge_kutta4_integrate()      
+    LOOP
+
+    FDROP runge_kutta4_done
+;
+[THEN]
+
+BASE !
+[THEN]
 

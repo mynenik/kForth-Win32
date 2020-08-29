@@ -50,7 +50,7 @@
 \                The beam width is set to 5 mm by default, but can
 \                be changed in the variable "fwhm". Resolution is 
 \                shown in nm.
-include ans-words
+
 include strings
 
 \ grating properties

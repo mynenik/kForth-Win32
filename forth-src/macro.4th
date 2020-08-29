@@ -11,37 +11,51 @@
 \	    MACRO  ??  " IF  \  THEN "
 \	    : FOO .. ?? EXIT .... ;  ?? compiles to -- IF EXIT THEN
 \
-\ Following files required under kForth:
-\
-\	strings.4th
-\	ans-words.4th
+\ Requires:
+\	ans-words.4th  (kForth only)
 \
 \ Revisions:
 \
-\	2003-2-6  kForth version created  KM
+\   2003-02-06  km  kForth version created
+\   2004-02-07  km  revised def of MACRO for kForth 1.2.0
+\   2011-03-01  km  removed requirement of strings.4th  
 \
 \ For use with ANS Forths, define the following:
 \
-\     : ?ALLOT HERE SWAP ALLOT ;
 \     : NONDEFERRED ;
+
+[undefined] ?allot [IF]  : ?allot ( u -- a ) here swap allot ;  [THEN]
 
 : PLACE  ( caddr n addr -)  2DUP  C!  CHAR+  SWAP  CHARS  MOVE ;
 : SSTRING ( char "ccc" - addr) WORD COUNT DUP 1+ CHARS ?ALLOT PLACE ;
 
 : split-at-char  ( a  n  char  -  a  k  a+k  n-k)
-	>R  2DUP  BEGIN  DUP  WHILE  OVER  C@  R@  -
+     >r  2dup  
+     BEGIN  
+       dup  
+     WHILE  
+        over  c@  r@  -
         ( WHILE  1 /STRING  REPEAT  THEN)
-	0= IF R> DROP TUCK 2>R - 2R> EXIT THEN 1 /STRING REPEAT
-        R> DROP  TUCK  2>R  -  2R> ;
+	0= IF  r> drop tuck 2>r - 2r> EXIT THEN 
+	1 /string 
+     REPEAT
+     r> drop  tuck  2>r  -  2r> ;
 
 
 : DOES>MACRO  \ Compile the macro, including external parameters
-	DOES> COUNT  BEGIN [CHAR]  \ split-at-char  2>R  EVALUATE  R@
-	WHILE BL WORD COUNT EVALUATE 2R>  1 /STRING REPEAT
-	R> DROP  R> DROP ;
+    DOES> count  
+    BEGIN 
+      [char] \  split-at-char  
+      2>r  evaluate  r@
+    WHILE 
+      bl word count evaluate 
+      2r>  1 /string 
+    REPEAT
+    2r> 2drop ;
 
-: MACRO  CREATE IMMEDIATE  S" NONDEFERRED" EVALUATE  CHAR SSTRING
-	DOES>MACRO ;
+: MACRO  
+    CREATE IMMEDIATE  NONDEFERRED  
+    CHAR SSTRING DOES>MACRO ;
 
 
 \ Further examples of macros:

@@ -5,10 +5,17 @@
 \ DEPENDENCIES: CORE EXT WORDSET ; COMMON USAGE ?DO
 \ Use of this code is free subject to acknowledgment of copyright.
 \ Copyright (c) 2001-2002 Jabari Zakiya - jzakiya@mail.com  4/17/2002
-\ Adapted for kForth by Krishna Myneni 2/6/2003 --- hardcoded for
-\   little endian systems. 
+\ Adapted for kForth by Krishna Myneni 2/6/2003; revised 4/9/2004 km
+\ Revisions:
+\   2004-09-04  km
+\   2006-04-18  revised setlen, storelen, hash>mackey, and keyxor
+\               per Jabari's instructions so that MD5Test and
+\               HMAC-TESTS will produce correct output on big
+\		endian systems (e.g. kForth ppc-osx port).  km
+\   2020-02-06  fixed defn of ]L for ANS-Forth compatibility.  km
+\
 \ ============== kForth requirements =========================
-\ Requires kForth 1.0.14 or later, with following libraries:
+\ Requires kForth 1.2.2 or later, and the following libraries:
 \   ans-words.4th
 \   strings.4th
 \   files.4th
@@ -23,9 +30,7 @@
   VARIABLE MD5len           \ Holds message length
   CREATE buf[]  64 ALLOT    \ Holds message block
 
-\ The following macro def of ]L does not work in kForth at present.
-\ It has been expanded wherever it was used in the original code. KM 
-\ : ]L  S" ] LITERAL " EVALUATE ; IMMEDIATE
+: ]L ] POSTPONE LITERAL ; IMMEDIATE
 
 : bytes>< ( m -- w )  \ Reverse bytes of cell on stack
   [ HEX ]  DUP >R  18 LSHIFT  R@  FF00 AND  8 LSHIFT  OR
@@ -33,15 +38,15 @@
 ;
 
 1 a !     \ for endian testing
-\ a C@ [IF] \ if little ENDIAN cpu (e.g. Intel x86 
+a C@ [IF] \ if little ENDIAN cpu (e.g. Intel x86 
        MACRO endian@  " @ "
        MACRO endian!  " ! "
 
-\ [ELSE] \ big ENDIAN cpus (e.g. Power PCs)
-\
-\       MACRO endian@  " @  bytes>< "
-\       MACRO endian!  " SWAP  bytes><  SWAP  ! "
-\ [THEN]
+[ELSE] \ big ENDIAN cpus (e.g. Power PCs)
+
+       MACRO endian@  " @  bytes>< "
+       MACRO endian!  " SWAP  bytes><  SWAP  ! "
+[THEN]
 
 \ Macros inserts 4 variable names at the '\' locations
 MACRO F() " \ @ DUP >R INVERT \ @ AND R> \ @ AND OR \ @ + "
@@ -50,7 +55,7 @@ MACRO H() " \ @ \ @ XOR \ @ XOR \ @ + "
 MACRO I() " \ @ INVERT \ @ OR \ @ XOR \ @ + "
 
   32 CONSTANT CELLSIZE
-MACRO rol\ " DUP [ CELLSIZE \ TUCK - ] LITERAL RSHIFT SWAP LITERAL LSHIFT OR "
+MACRO rol\ " DUP [ CELLSIZE \ TUCK - ]L RSHIFT SWAP LITERAL LSHIFT OR "
 MACRO M[]+ " R@  \  CELLS +  ENDIAN@  + "
 
  HEX
@@ -139,9 +144,9 @@ MACRO M[]+ " R@  \  CELLS +  ENDIAN@  + "
  DECIMAL
 
 : setlen ( -- )
-  MD5len @  DUP  [ CELLSIZE 3 - ] LITERAL  RSHIFT  
-  [ buf[] 60 CHARS + ] LITERAL !
-  3 LSHIFT  [ buf[] 56 CHARS + ] LITERAL !
+  MD5len @  DUP  [ CELLSIZE 3 - ]L  RSHIFT  
+  [ buf[] 60 CHARS + ]L endian!
+  3 LSHIFT  [ buf[] 56 CHARS + ]L endian!
 ;
 
 \ Do all 64 byte blocks leaving remainder block
@@ -173,10 +178,10 @@ MACRO M[]+ " R@  \  CELLS +  ENDIAN@  + "
  CREATE oarray  64 CHARS  ALLOT
 
 : hash>mackey  ( - )  \ Store hash values in mackey array 
-  d @  c @  b @  a @  mackey  4 0 DO TUCK  !  CELL+  LOOP  DROP ;
+  d @  c @  b @  a @  mackey  4 0 DO TUCK  endian!  CELL+  LOOP  DROP ;
 
 : keyxor ( #pad  kadr  iadr - )  
-  16 0 DO  >R  2DUP  @  XOR  R@  !  CELL+  R>  CELL+  LOOP
+  16 0 DO  >R  2DUP  endian@  XOR  R@  endian!  CELL+  R>  CELL+  LOOP
   2DROP  DROP
 ;
 
@@ -210,11 +215,11 @@ MACRO [MD5-MAC]  " MD5int  MD5  dofullblocks  dofinal"
   DUP 4 RSHIFT digit$ + C@ savedigit 15 AND digit$ + C@ savedigit
 ;
 
-\ a C@ [IF] \ little ENDIAN
+a C@ [IF] \ little ENDIAN
 : celldigits ( a1 -- )  DUP 4 + SWAP DO I C@ bytedigits LOOP ;
-\ [ELSE]
-\ : celldigits ( a1 -- )  DUP 3 + DO I C@ bytedigits -1  +LOOP ;
-\ [THEN]
+[ELSE]
+ : celldigits ( a1 -- )  DUP 3 + DO I C@ bytedigits -1  +LOOP ;
+[THEN]
 
 : MD5string ( -- adr count ) \ return address of counted MD5 string
   intdigits  d  c  b  a  4 0 DO  celldigits  LOOP  PAD COUNT
@@ -344,8 +349,8 @@ MACRO [MD5-MAC]  " MD5int  MD5  dofullblocks  dofinal"
 : bytes@  ( adr n - )  rfileid @  READ-FILE  2DROP ;
 
 : storelen  ( lo hi - )
-  D2*  D2*  D2*  [ buf[] 60 CHARS + ] LITERAL !  
-  [ buf[] 56 CHARS + ] LITERAL !
+  D2*  D2*  D2*  [ buf[] 60 CHARS + ]L endian!  
+  [ buf[] 56 CHARS + ]L endian!
 ;
 
 : getpartial ( cnt -- buf[] cnt2 ?)

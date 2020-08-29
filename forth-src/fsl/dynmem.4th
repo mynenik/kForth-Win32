@@ -3,6 +3,13 @@
 \         Dreas Nielson, 1990; Dynamic Memory Allocation;
 \         Forth Dimensions, V. XII, No. 3, pp. 17-27
 \
+\ Revisions:
+\   2003-03-18  km;  Adapted for kForth 
+\   2004-07-16  km;  Fixed deallocation of memory in }}free
+\   2007-10-27  km;  save base, switch to decimal, and restore base
+\   2011-09-16  km;  use Neal Bridges' anonymous module interface
+\   2012-02-19  km;  use KM/DNW's modules library
+
 \ This is an ANS Forth program requiring:
 \      1. The Memory-Allocation wordset, or the implementations below of
 \         ALLOCATE and FREE
@@ -79,13 +86,13 @@
 \	A dynamic array name can be re-used by calling }free to release
 \	the old space and then calling }malloc again to reallocate it.
 
-CR .( DYNMEM            V1.9            4 January 1995   EFC )
+CR .( DYNMEM            V1.9d          19 February  2012   EFC )
+BASE @ DECIMAL
 
-\ Adapted for kForth (km 2003-03-18)
-
+BEGIN-MODULE
 Private:
 
-\ HAS-MEMORY-WORDS? 0= [IF]
+HAS-MEMORY-WORDS? 0= [IF]
 
 1024 1024 * CONSTANT POOLSIZE	\ adjust up or down as needed
 CREATE pool POOLSIZE allot
@@ -95,7 +102,7 @@ CREATE pool POOLSIZE allot
 variable freelist ( 0 ,)
 
 
-\ [THEN]
+[THEN]
 
 Public:
 
@@ -104,7 +111,7 @@ Public:
 
 : cell_size ( addr -- n )      >BODY CELL+ @ ;       \ gets array cell size
 
-\ HAS-MEMORY-WORDS? 0= [IF]
+HAS-MEMORY-WORDS? 0= [IF]
 
 \ initialize memory pool at ALIGNED address 'start_addr'
 : Dynamic-Mem ( start_addr length -- )
@@ -162,7 +169,7 @@ pool POOLSIZE Dynamic-Mem
            0           \ this code ALWAYS returns a success flag
 ;
 
-\ [THEN]
+[THEN]
 
 \ word for allocation of a dynamic 1-D array memory
 \ typical usage:  & a{ #elements }malloc
@@ -209,8 +216,14 @@ pool POOLSIZE Dynamic-Mem
 
 ;
 
-: }}free    }free ;
+: }}free  ( addr -- )  
+	>BODY DUP a@ 
+	1 CELLS -	\ see note in }}malloc above, ptr points to 
+	                \   1 cell past start of region. 
+	FREE TO malloc-fail?
+	0 SWAP ! ;
 
 
-Reset_Search_Order
+END-MODULE
+BASE !
 

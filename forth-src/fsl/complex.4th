@@ -1,290 +1,711 @@
 \ ANS Forth Complex Arithmetic Lexicon
 
-\ ---------------------------------------------------
-\     (c) Copyright 1998  Julian V. Noble.          \
-\       Permission is granted by the author to      \
-\       use this software for any application pro-  \
-\       vided this copyright notice is preserved.   \
-\ ---------------------------------------------------
-\
-\ Modifications for use with kForth (Rls 2-10-2002 or later)
-\   by Krishna Myneni, 03-05-2002.
-\
+\ Forth Scientific Library Algorithm #60
+
+\ ------------------------------------------------------------ \
+\ Original author:                                             \
+\ Copyright (C) 1998 Julian V. Noble                           \
+\                                                              \
+\ Modifications not derived from the original:                 \
+\ Copyright (C) 2002, 2003, 2005, 2008-2010 David N. Williams  \
+\                                                              \
+\ Version 1.0.3b, revised December 25, 2010.                     \
+\                                                              \
+\ This library is free software; you can redistribute it       \
+\ and/or modify it under the terms of the GNU Lesser General   \
+\ Public License as published by the Free Software Foundation; \
+\ either version 2.1 of the License, or at your option any     \
+\ later version.                                               \
+\                                                              \
+\ This library is distributed in the hope that it will be      \
+\ useful, but WITHOUT ANY WARRANTY; without even the implied   \
+\ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR      \
+\ PURPOSE.  See the GNU Lesser General Public License for more \
+\ details.                                                     \
+\                                                              \
+\ You should have received a copy of the GNU Lesser General    \
+\ Public License along with this library; if not, write to the \
+\ Free Software Foundation, Inc., 59 Temple Place, Suite 330,  \
+\ Boston, MA 02111-1307 USA.                                   \
+\ ------------------------------------------------------------ \
+
 \ Environmental dependences:
-\       1. requires FLOAT and FLOAT EXT wordsets
-\
-\ xxxx  2. assumes separate floating point stack   xxxxxxx
-\    THIS VERSION ASSUMES INTEGRATED FP AND DATA STACK ( km)
-\
-\       3. does not construct a separate complex number stack
+\ 1. requires FLOATING and FLOATING EXT wordsets
+\ 2. assumes separate floating-point stack
+\ 3. does not construct a separate complex number stack
+\ 4. uses TOOLS EXT words:
+\    [IF]  [THEN]  [ELSE]
 
-\ Complex numbers x+iy are stored on the stack as ( x y -- ).
+\ Complex numbers x+iy are stored on the fp stack as ( f: -- x y),
+\ also written as ( f: -- z ).
+
 \ Angles are in radians.
-\ Polar representation measures angle from the positive x-axis.
 
-\ All Standard words are in uppercase, non-Standard words in lowercase,
-\ as a convenience to the user.
+\ Polar representation measures angles from the positive x-axis.
 
-\ Standard words not implemented in kForth, so we provide
-\   equivalent defs.
-\
-\ Added n. as alternative output for complex numbers  km 2003-2-19
+\ All Standard words are in uppercase, most non-Standard words
+\ in lowercase.
 
-: SPACE BL EMIT ;
-: FSINCOS ( f -- fsin fcos ) FDUP FSIN FSWAP FCOS ;
-: FLOAT+ DFLOAT+ ;
-: FLOATS DFLOATS ;
-: F2/ 2e F/ ;
-: F2* 2e F* ;
+\ Unattributed changes are by dnw.  The revision date above may
+\ reflect cosmetic changes not logged here.
 
-\ ---------------------------------------- LOAD, STORE
-: z@  DUP  F@  ROT FLOAT+  F@ ;     ( adr -- z)
-: z!  DUP  >R FLOAT+  F!  R> F! ;   ( f adr -- z)
-\ ------------------------------------ END LOAD, STORE
+\ Version 1.0.3c
+\ 06Feb11 * Removed unneeded conditional defs of FS. and
+\           and F2DUP for kForth 1.5.2 or greater.  km
 
-\ non-Standard fp words I have found useful ( jvn)
+\ Version 1.0.3b
+\ 25Dec10 * Adapted for unified data/fp stack systems  km
+\           set PRINCIPAL-ARG to TRUE
+ 
+\ Version 1.0.3
+\ 09Dec10 * Added: COMPLEX COMPLEXES COMPLEX+
 
-: f-rot    FROT  FROT  ;
-: fnip   FSWAP  FDROP  ;
-: ftuck    FSWAP  FOVER ;
+\ Version 1.0.2
+\ 07Nov10 * Renamed SIGNBIT as FSIGNBIT, to comply with Forth
+\           IEEE-FP developments.
+\ 17Nov10 * Made PRINCIPAL-ARG a value which controls the action
+\           instead of the compilation of arg, log, and
+\           nonintegral powers.
+\         * Removed forced principal arg for FATAN2.
+\         * Added NPARG, nonprincipal arg.
+\ 25Nov10 * Removed .FSIGN and .FMINUS.  Added .F[BL|-] and
+\           .F[+|-]I, and revised Z. and ZS. to use them.
+\ 27Nov10 * Upper cased:  ZVARIABLE ZCONSTANT ZLITERAL
 
-1.0E0  FCONSTANT  f1.0
+\ Version 1.0.1
+\ 18Aug09 * Fixed FLOATING-EXT and FLOATING-STACK environmental
+\           queries to guarantee an ABORT when the floating-
+\           point stack is not separate.
 
-: 1/f   F1.0  FSWAP  F/ ;
-: f^2   FDUP  F*  ;
+\ Version 1.0 (Forth Scientific Library)
+\ 17May09 * Added comment that IEEE special values are not
+\	    explicitly mentioned.
 
-3.1415926535897932385E0  FCONSTANT  fpi
-0.0E0  FCONSTANT  f0.0
+\ Version 0.8.5
+\ 20Sep08 * Renamed F-ROT as -FROT.
+\         * Added ZROT, -ZROT, and ZLITERAL.
+\ 21Sep08 * Eliminated redundant STATE in REAL, IMAG, and CONJG.
+\         * Revised Z- to conserve signed zero.
+\         * Added list of words, improved layout and comments,
+\           added url's for references.
+\ 22Sep08 * Removed EXIT from ZLITERAL throw phrase.
+\ 11Jan09 * Replaced instance of "(f:" by "( f:" 
+\ 12Mar09 * Renamed NONAME as FNONAME to avoid name clash with
+\           gforth.
+\         * Revised ZCONSTANT based on Anton Ertl's portable
+\           definition of CONSTANT, which doesn't use DOES>.
+\ 18Mar09 * Clarified comments about the ambiguity of ATAN2, and
+\           replaced -1E 0E by -1E 1E to make the quadrant
+\           transparent in the principal angle test.
+\         * Added a disclaimer about the sign of NaN for IEEE
+\           754/854 systems.
+
+\ Version 0.8.4
+\ 29Aug05 * Krishna Myneni noticed that Z and ZS. don't print
+\           the sign of minus zero.  Fixed by introducing
+\           SIGNBIT, which aims to emulate the IEEE 754
+\           function.
+
+\ Version 0.8.3
+\  3Mar05 * Revised ZCOSH for fairly good accuracy with
+\           conservation of signed zero on the real axis.
+\  4Mar05 * Rewrote ZACOS to use minimal computation.
+\ 24Apr05 * Renamed (-I)* as -I*.  Removed simple floating point
+\           and complex constants, leaving them to the user.
+\         * Added Y+ and Y-, syntactic sugar for F+ and F-.
+
+\ Version 0.8.2
+\  5Mar03 * Release with changes under 0.8.1  Passes all our
+\           tests, except for a few "exotic" signed zero
+\           properties.
+
+\ Version 0.8.1
+\ 21Feb03 * Rewrote PSQRT for stability on the branch cut.
+\         * Added X+ and X-.  Used to make ZASINH, ZACOSH,
+\           ZATANH, and ZACOTH valid on their cuts, labeled by
+\           signed zero.
+\         * Passed complex-test.fs on MacOS X, including signed
+\           zero and branch cut tests.
+\ 22Feb03 * Replaced Z. and ZS. with jvn's code for Krishna
+\           Myneni's suggestion to factor out the sign of the
+\           imaginary part.
+
+\ Version 0.8.0
+\ 15Dec02 * Started revision of jvn's complex.f.
+\ 20Feb03 * Release.                
+
+\ The basic modifications have been a few changes in
+\ floating-point alignment and the completion of the definitions
+\ of the inverse functions.
+
+\ The definitions here coincide with Abramowitz and Stegun [1],
+\ Kahan [2], and the OpenMath standard [3], which produce
+\ principal branches given principal branches for square roots
+\ and natural logs.  The formulas, or "principal expressions",
+\ are selected from [3], with choices among equivalent, formally
+\ correct possibilities based mainly on computational
+\ conciseness, with a nod to numerical stability where the
+\ authors mention it.  Those authors do not claim to analyze
+\ numerical stability, but Kahan does, and we implement his
+\ algorithms in Forth in a separate library.
+
+\ The original Noble code uses the convention common among
+\ physicists for branch cuts, with arguments between zero and
+\ 2pi, especially for logs and noninteger powers.  The numerical
+\ analysis community is pretty unanimous about using principal
+\ branches instead.
+
+\ Everybody seems to agree on the nontriviality of the branch
+\ cuts for the inverse functions and to follow Abramowitz and
+\ Stegun, who define them in terms of principal branches. 
+\ In this code we include a PRINCIPAL-ARG switch to select
+\ between the two common conventions for arg, log, and
+\ nonintegral powers, but we use only principal arguments for
+\ the inverse functions.
+
+\ Kahan pays attention to signed zero, where available in IEEE
+\ 754/854 implementations.  We address that a couple of ways in
+\ this library.  One is to provide optional versions of ZSINH
+\ and ZTANH which respect the sign of zero, and of ZCOSH which
+\ respects it on the real axis.  The other is to write the
+\ functions having branch cuts so that signed zero in the
+\ appropriate x or y input produces correct values on the cuts.
+
+\ The sign of any resultant NaN when IEEE 754/854 is present is
+\ not at all controlled in this library.  It is simply whatever
+\ the host system produces from the propagation of NaN's in the
+\ code steps.  And different systems are allowed to produce
+\ different results, because the IEEE 754/854 standard imposes
+\ no interpretation of the sign of NaN.
+
+\ The test file for this code is complex-test.fs.  Although the
+\ code here does not explicitly mention any of the IEEE 754
+\ floating-point values for signed zero, NaN, or infinity, with
+\ the optional versions mentioned above, the words pass all
+\ tests in complex-ieee-test.fs, except for signed zero in the
+\ imaginary part at points of real analyticity in ZASIN and
+\ ZASINH.  The more aggressive Kahan algorithms in
+\ complex-kahan.fs and pfe pass those as well.
+
+\ The word COMPLEX may be used with Forth Scientific Library
+\ arrays, after loading the system-dependent fsl-util file. 
+\ Here is an example of an array sufficient for 20 complex
+\ numbers:
+
+\   20 COMPLEX ARRAY a{
+\   1E 0E a{ 0 } z!
+\   0E 1E a{ 1 } z!
+
+\ s" FLOATING-EXT" environment? dup [IF] ( flag) and [THEN]
+\ 0= [IF] cr .( ***Floating-point extensions not available.) cr
+\ ABORT [THEN]
+
+\ s" FLOATING-STACK" environment? dup [IF] ( maxdepth) and [THEN]
+\ 0= [IF] cr .( ***Floating-point stack not separate.) cr
+\ ABORT [THEN]
 
 
-\ --------------------------------- MANIPULATE FPSTACK
-: z.   FSWAP  F. ."  + i " F. ;  ( x y --)     \ emit complex #
+\ ------------------------------------------------------ WORDS
 
-: n. ( x y -- | print complex number in easier to read, more natural form)
-	FSWAP FDUP F0= DUP >R IF FDROP ELSE F. THEN
-	FDUP F0= IF 
-	  R> IF [CHAR] 0 EMIT THEN FDROP EXIT 
-	THEN
-	FDUP F0< IF 
-	  [CHAR] - EMIT R> INVERT IF SPACE THEN
-	ELSE 
-	  R> INVERT IF [CHAR] + EMIT SPACE THEN
-	THEN 
-	[CHAR] i EMIT
-	FABS FDUP 1E F<> IF SPACE F. ELSE FDROP THEN ;
-  
+\ VALUES AND FCONSTANTS
+\   PRINCIPAL-ARG
+\   pi/2  2pi
 
-: z=0  f0.0 f0.0 ;                 ( -- 0 0)
-: z=1  f1.0 f0.0 ;                 ( -- 1 0)
-: z=i  z=1 FSWAP ;                 ( -- 0 1)
-: zdrop  FDROP FDROP ;             ( x y --)
-: zdup   FOVER FOVER ;             ( x y -- x y x y)
+\ NONSTANDARD FLOATING POINT
+\   -frot  fnip  ftuck  s>f  1/f  f^2  f2*  f2/
+\   fsignbit
 
-\ temporary storage for stuff from stack
+\ LOAD AND STORE
+\   COMPLEX  COMPLEXES  COMPLEX+
+\   z@  z!  ZVARIABLE  ZCONSTANT  ZLITERAL
 
-CREATE noname   2 FLOATS  ALLOT     \ ALLOT z variable
+\ OUTPUT
+\   .f[bl|-]  .f[+|-]i  z.  zs.
 
-: zswap    ( x y u v -- u v x y)
-    [ noname ] LITERAL  F!  f-rot
-    [ noname ] LITERAL  F@  f-rot  ;
+\ FLOATING POINT STACK
+\   z=  zdrop  zdup  zswap  zover  znip  ztuck  zrot  -zrot 
 
-: zover     ( x y u v -- x y u v x y )
-    FROT    [ noname FLOAT+ ]  LITERAL  F!   ( -- x u v)
-    FROT FDUP   [ noname    ]  LITERAL  F!   ( -- u v x)
-    f-rot   [ noname FLOAT+ ]  LITERAL  F@   ( -- x u v y)
-    f-rot   [ noname        ]  LITERAL  z@   ( -- x y u v x y)
+\ ARITHMETIC
+\   conjg  real  imag  cmplx
+\   i*  -i*  znegate
+\   z*  z*f  z/  z/f  z+  z-  x+  x-  y+  y-
+\   |z|  1/z  z2*  z2/  z^2  z^3  z^4  z^n  |z|^2
+
+\ FUNCTIONS
+\   parg  nparg  pln  psqrt
+\   arg  >polar  polar>
+\   zsqrt  zexp  zln  z^
+\   zsinh  zcosh  ztanh  zcoth
+\   zsin  zcos  ztan  zcot
+
+\ INVERSE FUNCTIONS
+\   zasinh  zacosh  zatanh  zacoth
+\   zasin  zacos  zatan  zacot
+
+\ ----------- kForth Requirements-------------------- 
+[undefined] f0.0     [IF] 0.0E  FCONSTANT  f0.0 [THEN]
+[undefined] f1.0     [IF] 1.0E  FCONSTANT  f1.0 [THEN]
+\ ----------- end of kForth Requirements ------------
+
+\ -------------------------------------- VALUES AND FCONSTANTS
+
+\ The PRINCIPAL-ARG flag controls calculation with/without the
+\ principal argument for ARG, >POLAR, ZSQRT, ZLN, and Z^.  The
+\ inverse functions are always defined with principal arguments,
+\ in accord with Abramowitz and Stegun [1], Kahan [2], and
+\ OpenMath [3].
+
+\ This value may be changed after this file is loaded.
+\  false VALUE PRINCIPAL-ARG     \ output  0 <= arg <  2pi
+ true  VALUE PRINCIPAL-ARG     \ output -pi < arg <= pi
+
+DECIMAL  \ important for fp input
+
+ 1.570796326794896619231E FCONSTANT pi/2
+ 6.283185307179586476925E FCONSTANT 2pi
+
+
+\ --------------------------------- NONSTANDARD FLOATING POINT
+
+\ In ANS Forth 94 FATAN2 is ambiguous.  The definitions of PARG
+\ and NPARG below assume it to follow one of only two known
+\ conventions, -pi < arg < pi (or maybe <=), or 0 <= arg < 2pi. 
+\ The two words are helpers for managing the PRINCIPAL-ARG
+\ option.
+
+-1E 1E ( f: y x) FATAN2 F0<
+( arg<0)
+[IF]    \ FATAN2 principal
+    : parg  ( f: x y -- princ.arg )  FSWAP FATAN2 ;
+    : nparg ( f: x y -- npinc.arg )
+        FDUP F0< >R FSWAP FATAN2
+        ( y<0) R> IF 2pi F+ THEN ;
+[ELSE]  \ FATAN2 not principal arg
+    : parg  ( f: x y -- princ.arg )
+        FDUP F0< >R FSWAP FATAN2
+        ( y<0) R> IF 2pi F- THEN ;
+    : nparg ( f: x y -- nprincp.arg )  FSWAP FATAN2 ;
+[THEN]
+
+s" [UN]" PAD C! PAD CHAR+ PAD C@ MOVE 
+PAD FIND NIP 0= [IF]
+    \ Leave true if name is in the search order, else leave false.
+    : [UN]  ( "name" -- flag )  BL WORD FIND NIP 0= ; IMMEDIATE
+[THEN]
+
+\ non-Standard fp words jvn has found useful
+[UN] s>f     [IF]  : s>f    S>D  D>F  ;       [THEN]
+[UN] -frot   [IF]  : -frot  FROT  FROT  ;     [THEN]
+[UN] fnip    [IF]  : fnip   FSWAP  FDROP  ;   [THEN]
+[UN] ftuck   [IF]  : ftuck  FSWAP  FOVER  ;   [THEN]
+[UN] 1/f     [IF]  : 1/f    f1.0  FSWAP  F/ ; [THEN]
+[UN] f^2     [IF]  : f^2    FDUP  F*  ;       [THEN]
+
+\ added by dnw
+[UN] f2*     [IF]  : f2*    FDUP F+  ;        [THEN]
+[UN] f2/     [IF]  : f2/    0.5E F*  ;        [THEN]
+
+[UN] fsignbit [IF]
+: fsignbit  ( f: r -- s: minus? )
+(
+Emulate the IEEE 754 signbit function, including signed zero
+when the system supports IEEE 754.  The results for +Inf, -Inf,
+and NaN are undefined in this implementation when IEEE 754 is
+absent, and wrong for NaN when IEEE 754 is present and the sign
+bit is unity.
+)
+    ( f: r) FDUP 0E FDUP F~
+    ( 0E?)  IF FDROP FALSE EXIT THEN
+    ( f: r) FDUP -0E 0E F~
+    ( -0E?) IF FDROP TRUE EXIT THEN
+    ( f: r) 0E F< ;
+[THEN]
+
+
+\ --------------------------------------------- LOAD AND STORE
+
+: COMPLEXES ( n -- n*/complex )           2* FLOATS ;
+: COMPLEX+  ( f-addr -- f-addr+/complex ) [ 1 COMPLEXES ] LITERAL + ;
+[UN] COMPLEX [IF] 1 COMPLEXES CONSTANT COMPLEX [THEN]
+
+\ hidden, *nonnestable* scratch storage for stuff from fp stack
+\  FALIGN HERE 3 COMPLEXES ALLOT VALUE fnoname
+CREATE fnoname 3 COMPLEXES ALLOT
+
+: z@  ( addr --  f: -- z)  DUP >r F@ r> FLOAT+ F@ ;
+: z!  ( addr --  f: z --)  DUP >r FLOAT+ F! r> F! ;
+
+: ZVARIABLE  ( "name" -- )  \ compile
+             ( -- addr )    \ run
+    \ FALIGN HERE [ 1 COMPLEXES ] LITERAL ALLOT CONSTANT ;
+    CREATE [ 1 COMPLEXES ] LITERAL ALLOT ;
+
+: ZLITERAL   ( f: z -- )  \ compile
+             ( f: -- z )  \ run
+    STATE @ 0= IF -14 THROW THEN
+    FSWAP POSTPONE FLITERAL POSTPONE FLITERAL ; IMMEDIATE
+
+\ : ZCONSTANT  ( "name" f: z -- )  \ compile
+\             ( f: -- z )         \ run
+(
+Based on Anton Ertl's portable definition of CONSTANT,
+comp.lang.forth, "Re: Alternative DEFER strategies?", 16 Dec
+2008, but avoiding the return stack.
+)
+\  [ fnoname ] LITERAL z!
+\  : [ fnoname ] LITERAL z@ POSTPONE zliteral POSTPONE ; ;
+: zconstant   FSWAP  CREATE  2 FLOATS  ?allot  
+	      DUP >R  F!  R>  FLOAT+  F!  
+	      DOES>  DUP >R  F@  R>  FLOAT+  F@  ;
+
+
+\ ----------------------------------------------------- OUTPUT
+
+: .f[bl|-]  ( f: r -- |r| )
+  FDUP fsignbit >r FABS r>
+  DUP INVERT BL AND   SWAP [CHAR] - AND + EMIT ;
+
+: .f[+|-]i  ( f: r -- |r| )
+  FDUP fsignbit >r FABS r>
+  DUP INVERT [CHAR] + AND   SWAP [CHAR] - AND + EMIT ."  i" ;
+
+: z.   ( f: z -- )    \ emit complex #
+  FSWAP .f[bl|-] F.   .f[+|-]i F. ;
+
+: zs.  ( f: z -- )    \ emit complex #, scientific notation
+  FSWAP .f[bl|-] FS.   .f[+|-]i FS. ;
+
+
+\ --------------------------------------- FLOATING POINT STACK
+
+: zdrop  ( f: z --)       ( FDROP FDROP) F2DROP ;
+: zdup   ( f: z -- z z )  ( FOVER FOVER) F2DUP  ;
+
+: zswap  ( f: z1 z2 -- z2 z1 )
+    [ fnoname ] LITERAL  F!  -frot
+    [ fnoname ] LITERAL  F@  -frot
 ;
 
-: real    FDROP ;
-: imag    fnip  ;
-: conjg   FNEGATE ;
+: zover  ( f: z1 z2 -- z1 z2 z1 )
+    FROT    [ fnoname FLOAT+ ]  LITERAL  F!  ( f: -- x1 x2 y2)
+    FROT FDUP   [ fnoname    ]  LITERAL  F!  ( f: -- x2 y2 x1)
+    -frot   [ fnoname FLOAT+ ]  LITERAL  F@  ( f: -- x1 x2 y2 y1)
+    -frot   [ fnoname        ]  LITERAL  z@  ( f: -- x1 y1 x2 y2 x1 y1)
+;
+
+: znip   ( f: z1 z2 -- z2 )        zswap  zdrop ;
+: ztuck  ( f: z1 z2 -- z2 z1 z2 )  zswap  zover ;
+
+: zrot   ( f: z1 z2 z3 -- z2 z3 z1 )
+    [ fnoname ]            LITERAL z!
+    [ fnoname COMPLEX+ ] LITERAL z!
+    [ fnoname 2 COMPLEXES + ] LITERAL z!
+    [ fnoname COMPLEX+ ] LITERAL z@
+    [ fnoname ]            LITERAL z@
+    [ fnoname 2 COMPLEXES + ] LITERAL z@
+;
+
+: -zrot  ( f: z1 z2 z3 -- z3 z1 z2 )
+    [ fnoname ]            LITERAL z!
+    [ fnoname COMPLEX+ ] LITERAL z!
+    [ fnoname 2 COMPLEXES + ] LITERAL z!
+    [ fnoname ]            LITERAL z@
+    [ fnoname 2 COMPLEXES + ] LITERAL z@
+    [ fnoname COMPLEX+ ] LITERAL z@
+;
 
 
-: znip     zswap  zdrop ;
-: ztuck    zswap  zover ;
+\ ------------------------------------------------- ARITHMETIC
 
-: z*f      ( x y a -- x*a y*a)
-    FROT  FOVER  F*  f-rot  F*  ;
+: real   ( f: x y -- x )       FDROP ;
+: imag   ( f: x y -- y )       fnip  ;
+: conjg  ( f: x y -- x -y )    FNEGATE ;
+: cmplx  ( f: x 0 y 0 -- x y)  FDROP fnip ;  \ for use with ftran2xx.f
 
-: z/f      ( x y a -- x/a y/a)
-    1/f   z*f  ;
+: znegate  ( f: x y -- -x -y )  FSWAP FNEGATE FSWAP FNEGATE ;
 
-: z*    ( x y u v -- x*u-y*v  x*v+y*u)
-\ uses the algorithm
-\       (x+iy)*(u+iv) = [(x+y)*u - y*(u+v)] + i[(x+y)*u + x*(v-u)]
-\       requiring 3 multiplications and 5 additions
-  
-        zdup F+                         ( x y u v u+v)
-        [ noname ] LITERAL  F!          ( x y u v)
-        FOVER F-                        ( x y u v-u)
-        [ noname FLOAT+ ] LITERAL F!    ( x y u)
-        FROT FDUP                       ( y u x x)
-        [ noname FLOAT+ ] LITERAL F@    ( y u x x v-u)
-        F*
-        [ noname FLOAT+ ] LITERAL F!    ( y u x)
-        FROT FDUP                       ( u x y y)
-        [ noname ] LITERAL F@           ( u x y y u+v)
-        F*
-        [ noname ] LITERAL F!           ( u x y)
-        F+  F* FDUP                     ( u*[x+y] u*[x+y])
-        [ noname ] LITERAL F@ F-        ( u*[x+y] x*u-y*v)
-        FSWAP
-        [ noname FLOAT+ ] LITERAL F@    ( x*u-y*v u*[x+y] x*[v-u])
-        F+ ;                            ( x*u-y*v x*v+y*u)
+: z=   ( f: z1 z2 -- s: flag )  FROT F= >R F= R> AND ;
+: z*f  ( f: x y a -- x*a y*a )  FROT FOVER F* -frot F*  ;
+: z/f  ( f: x y a -- x/a y/a )  1/f   z*f  ;
+: z+   ( f: z1 z2 -- z1+z2 )    FROT F+ -frot F+ FSWAP ;
 
-: z+   FROT F+  f-rot F+ FSWAP ;  ( a b x y -- a+x b+y)
+: z-   ( f: a b x y -- a-x b-y )
+(
+Kahan says, to conserve signed zero, write -y+b for b-y instead
+of -[y-b].
+)
+    FNEGATE FROT F+ -FROT F- FSWAP
+;
 
-: znegate  FSWAP FNEGATE FSWAP FNEGATE ;
+: z*   ( f: x y u v -- x*u-y*v  x*v+y*u)
+(
+Uses the algorithm
+    [x+iy]*[u+iv] = {[x+y]*u - y*[u+v]} + i{[x+y]*u + x*[v-u]}
+requiring 3 multiplications and 5 additions.
+)  
+    zdup F+                         ( f: x y u v u+v)
+    [ fnoname ] LITERAL  F!         ( f: x y u v)
+    FOVER F-                        ( f: x y u v-u)
+    [ fnoname FLOAT+ ] LITERAL F!   ( f: x y u)
+    FROT FDUP                       ( f: y u x x)
+    [ fnoname FLOAT+ ] LITERAL F@   ( f: y u x x v-u)
+    F*
+    [ fnoname FLOAT+ ] LITERAL F!   ( f: y u x)
+    FROT FDUP                       ( f: u x y y)
+    [ fnoname ] LITERAL F@          ( f: u x y y u+v)
+    F*
+    [ fnoname ] LITERAL F!          ( f: u x y)
+    F+  F* FDUP                     ( f: u*[x+y] u*[x+y])
+    [ fnoname ] LITERAL F@ F-       ( f: u*[x+y] x*u-y*v)
+    FSWAP
+    [ fnoname FLOAT+ ] LITERAL F@   ( f: x*u-y*v u*[x+y] x*[v-u])
+    F+ ;                            ( f: x*u-y*v x*v+y*u)
 
-: z-  znegate  z+ ;
+\ to avoid unneeded calculations on the other part that could
+\ raise gratuitous overflow or underflow signals and changes in
+\ the sign of zero (Kahan)
+: x+  ( f: x y a -- x+a y )  FROT F+ FSWAP ;
+: x-  ( f: x y a -- x-a y )  FNEGATE FROT F+ FSWAP ;
+: y+  ( f: x y a -- x y+a )  F+ ;
+: y-  ( f: x y a -- x y-a )  F- ;
 
-: |z|^2   f^2  FSWAP  f^2  F+  ;  ( z -- f)
+: |z|^2  ( f: z -- |z|^2 )  f^2  FSWAP  f^2  F+  ;
 
 \ writing |z| and 1/z as shown reduces overflow probability
-: |z|   ( x y -- |z|)
-    FABS  FSWAP  FABS
-    zdup  FMAX  f-rot  FMIN     ( max min)
-    FOVER  F/  f^2  1e0  F+  FSQRT  F*  ;
 
-: 1/z   fnegate  zdup  |z|  1/f  FDUP  [ noname ] LITERAL F!
-        z*f  [ noname ] LITERAL  F@  z*f  ;
+: |z|  ( f: x y -- |z|)
+    FABS FSWAP FABS
+    zdup FMAX
+    FDUP F0= IF
+        FDROP zdrop 0E
+    ELSE
+        -frot FMIN     ( f: max min)
+        FOVER F/ f^2 1E F+ FSQRT F*
+    THEN
+;
 
-: z/    1/z  z* ;
-: z2/   F2/  FSWAP  F2/  FSWAP  ;
-: z2*   F2*  FSWAP  F2*  FSWAP  ;
+: 1/z  ( f: z -- 1/z )
+    FNEGATE zdup |z| 1/f FDUP [ fnoname ] LITERAL F!
+    z*f [ fnoname ] LITERAL F@  z*f
+;
 
-: arg   ( x y -- arg[x+iy] )
-        FDUP  F0<  >R FSWAP    
-        FATAN2
-        R> IF  fpi F2*  F+  THEN ;
-\ tested September 27th, 1998 - 21:15
+: z/   ( f: z1 z2 -- z1/z2 )  1/z z* ;
+: z2/  ( f: z -- z/2 )        f2/ FSWAP f2/ FSWAP ;
+: z2*  ( f: z -- z*2 )        f2* FSWAP f2* FSWAP ;
 
-: >polar  ( x+iy -- r phi )  zdup  |z|  f-rot  arg  ;
-: polar>  ( r phi -- x+iy )  FSINCOS FROT  z*f   FSWAP  ;
+: arg     ( f: x y -- arg[x+iy] )
+    PRINCIPAL-ARG IF parg ELSE nparg THEN ;
 
-: i*      FNEGATE FSWAP ;  ( x+iy -- -y+ix)
-: (-i)*   FSWAP FNEGATE ;  ( x+iy -- y-ix)
+: >polar  ( f: x+iy -- r theta )   zdup |z| -frot arg  ;
+: polar>  ( f: r theta -- x+iy )   FSINCOS FROT z*f FSWAP  ;
 
-: zln   >polar   FSWAP  FDUP  F0=  ABORT" Can't take ZLN of 0"  FLN   FSWAP ;
+:  i*  ( f: x+iy -- -y+ix)  FNEGATE FSWAP ;
+: -i*  ( f: x+iy -- y-ix)   FSWAP FNEGATE ;
 
-: zexp   ( z -- exp[z] )   FSINCOS  FSWAP FROT  FEXP  z*f ;
+\ Raise z to an integer power.
+: z^2  ( f: z -- z^2 )  zdup z*  ;
+: z^3  ( f: z -- z^3 )  zdup z^2 z* ;
+: z^4  ( f: z -- z^4 )  z^2  z^2  ;
 
-: z^2   zdup  z*  ;
-: z^3   zdup  z^2  z* ;
-: z^4   z^2  z^2  ;
-
-: z^n      ( z n -- z^n )    \ raise z to integer power
-       >R  z=1   zswap  R>
-       DUP  50 < IF
-         BEGIN   DUP  0>  WHILE  >R
-                 R@  1 AND   IF ztuck  z*  zswap THEN z^2
-                 R>  2/
-         REPEAT  DROP  zdrop 
-       ELSE  >R  zln  R>  S>F  z*f  zexp  THEN  ;
-
-: z^   ( x y u v --  [x+iy]^[u+iv] )  zswap zln  z* zexp  ;
-
-: zsqrt   ( x y -- a b )     \ (a+ib)^2 = x+iy
-     zdup                               ( -- z z)
-     |z|^2                              ( -- z |z|^2 )
-     FDUP  F0=   IF   FDROP EXIT  THEN  ( -- z=0 )
-     FSQRT FROT  FROT  F0<  >R          ( -- |z| x )  ( -- sgn[y])
-     ftuck                              ( -- x |z| x )
-     F-  F2/                            ( -- x [|z|-x]/2 )
-     ftuck  F+                          ( -- [|z|-x]/2 [|z|+x]/2 )
-     FSQRT  R>  IF  FNEGATE  THEN       ( -- [|z|-x]/2  a )
-     FSWAP  FSQRT   ;                   ( -- a b)
-\ tested September 16th, 1999 - 13:49
-
-\ Complex trigonometric functions
-: zcosh    ( z -- cosh[z] )  zexp   zdup   1/z   z+  z2/  ;
-: zsinh    ( z -- sinh[z] )  zexp   zdup   1/z   z-  z2/  ;
-: ztanh    zexp  z^2    i*   zdup   f1.0 F-   zswap   f1.0 F+   z/  ;
-: zcoth    ztanh  1/z ;
-: zcos     ( z -- cos[z] )   i*    zcosh  ;
-: zsin     ( z -- sin[z] )   i*    zsinh  (-i)* ;
-: ztan     ( z -- tan[z] )   i*    ztanh  (-i)* ;
-
-\ Complex inverse trigonometric functions
-\   -- after Abramowitz & Stegun, p. 80-81
-
-\ the following is a primitive ANS-compatible data hiding mechanism
-\ ( not supported in kForth, so this part is rewritten without compile! )
-
-\ : compile!  ( xt -- )   COMPILE,  ;  IMMEDIATE
-
-: noname ( A|B)   ( x y f1 -- f2)   FROT  F+  |z|  F2/   ;
-
-: alpha.beta  ( x y -- alpha beta)
-        zdup  f1.0          noname
-        f-rot f1.0 FNEGATE  noname
-        zdup  F+  f-rot  F-  ;
-
-( ' NOOP  TO noname)      \ forget hidden xt
-
-\ Note: the following functions have not yet been fully tested. Use
-\       with caution!   September 17th, 1999 - 18:14
-
-( Inverse trig functions commented out until verified -- km 03-05-2002)
-
-\ : zasin   alpha.beta   FASIN  FSWAP  FDUP  f^2 f1.0 F-  FSQRT  F+  FLN ;
-\ : zacos   alpha.beta   FACOS  FSWAP  FDUP  f^2 f1.0 F-
-\          FSQRT  F+  FLN  FNEGATE ;
-\ : zatan   zdup  FOVER  |z|^2  FNEGATE f1.0 F+  F/ F2*  FATAN  F2/  f-rot
-\          FSWAP  f^2  FOVER  f1.0 F+ f^2  ( f: -- re y x^2 [y+1]^2 )
-\          F+  FDUP  FROT  F2*  F-  F/  FLN  F2/ F2/ ;
-\ : zasinh  i*   zasin  (-i)* ;
-\ : zacosh  zacos  i*   ;
-\ : zatanh  i*   zatan  (-i)* ;
+\ Use Z^ instead for n > 50 or so.
+: z^n  ( z n -- z^n ) ( n --  f: z -- z^n )
+    >R 1E 0E zswap R>
+    BEGIN DUP 0> WHILE
+        DUP >R 1 AND IF ztuck z* zswap THEN z^2 R> 2/
+    REPEAT DROP zdrop
+;
 
 
-\ ------------------------------------------ for use with ftran2xx.f
-: zvariable   CREATE   2 FLOATS  ALLOT  ;
+\ -------------------------------------------------- FUNCTIONS
 
-: cmplx   ( x 0 y 0 -- x y)  FDROP  FNIP  ;
-\ ------------------------------------------
+: pln  ( f: z -- ln[z].prin )   zdup parg -frot |z| FLN FSWAP ;
 
-( zconstant  added by km 2-26-2002)
+: zln  ( f: z -- ln[|z|]+iarg[z] )
+    >polar FSWAP FLN FSWAP
+;
 
-: zconstant   FSWAP  CREATE  2 FLOATS  ?allot  
-	      >R  R@  F!  R>  FLOAT+  F!  
-	      DOES>  >R  R@  F@  R>  FLOAT+  F@  ;
+: zexp ( f: z -- exp[z] )          FSINCOS FSWAP FROT FEXP z*f ;
+: z^   ( f: z1 z2 --  [z1]^[z2] )  zswap zln z* zexp ;
 
-	         
+: psqrt  ( f: z -- sqrt[z].prin )
+(
+Kahan's algorithm without overflow/underflow avoidance and
+without treating infinity.  But it should handle signed zero
+properly.
+)
+    zdup [ fnoname FLOAT+ ] LITERAL ( f: y) F!
+         [ fnoname ] LITERAL ( f: x) F!
+    |z| [ fnoname ] LITERAL F@
+        fabs f+ f2/ fsqrt               ( f: rho=sqrt[[|z|+|x|]/2])
+    fdup f0= >r
+        [ fnoname FLOAT+ ] LITERAL F@   ( f: rho y)
+    r> 0= IF ( rho<>0)
+        fover f/ f2/                    ( f: rho eta=[y/rho]/2)
+        [ fnoname ] LITERAL F@
+        f0< IF ( x<0)
+            fabs fswap                  ( f: |eta| rho)
+            [ fnoname FLOAT+ ] LITERAL F@
+            FDUP F0< >r  -0e 0e F~ r> OR
+            IF ( y<0) FNEGATE THEN      ( f: |eta| |rho|*sgn[y])
+        THEN
+    THEN ;
+
+0 [IF]
+PRINCIPAL-ARG [IF]
+: zsqrt  ( f: z -- sqrt[z] )  psqrt ;   \ imag cut
+[ELSE]
+: zsqrt  ( f: x y -- a b )              \ (a+ib)^2 = x+iy, real cut
+    zdup                                ( f: -- z z)
+    |z|^2                               ( f: -- z |z|^2)
+    FDUP  F0=   IF   FDROP EXIT  THEN   ( f: -- z=0)
+    FSQRT FROT  FROT  F0< >r            ( f: -- |z| x)  ( -- sgn[y])
+    ftuck                               ( f: -- x |z| x)
+    F-  f2/                             ( f: -- x [|z|-x]/2)
+    ftuck  F+                           ( f: -- [|z|-x]/2 [|z|+x]/2)
+    FSQRT  r> IF  FNEGATE  THEN         ( f: -- [|z|-x]/2  a)
+    FSWAP  FSQRT ;                      ( f: -- a b)
+[THEN]
+[THEN]
+
+: zsqrt  ( f: z -- sqrt[z] | a b )
+  PRINCIPAL-ARG
+  IF     ( f: z -- sqrt[z] )  psqrt     \ imag cut
+  ELSE   ( f: x y -- a b )              \ (a+ib)^2 = x+iy, real cut
+    zdup                                ( f: -- z z)
+    |z|^2                               ( f: -- z |z|^2)
+    FDUP  F0=   IF   FDROP EXIT  THEN   ( f: -- z=0)
+    FSQRT FROT  FROT  F0<  >r           ( f: -- |z| x)  ( -- sgn[y])
+    ftuck                               ( f: -- x |z| x)
+    F-  f2/                             ( f: -- x [|z|-x]/2)
+    ftuck  F+                           ( f: -- [|z|-x]/2 [|z|+x]/2)
+    FSQRT r> IF  FNEGATE  THEN          ( f: -- [|z|-x]/2  a)
+    FSWAP  FSQRT                        ( f: -- a b)
+  THEN
+;
+
+\ Trigonometric and hyperbolic functions
+
+\ All stack patterns are ( f: z -- func[z] ).
+
+0 [IF]
+: zsinh    zexp zdup 1/z z-z2/ ;
+[ELSE]
+\ This version is reasonably accurate and preserves
+\ signed zero.
+: zsinh
+    FSINCOS [ fnoname ] LITERAL ( f: cos[y]) F!
+        [ fnoname FLOAT+ ] LITERAL ( f: sin[y]) F!
+    FDUP FSINH [ fnoname ] LITERAL F@ F*  ( f: x sh[x]cos[y])
+    FSWAP FCOSH
+        [ fnoname FLOAT+ ] LITERAL F@ F*  ( f: sh[x]cos[y] ch[x]sin[y])
+;
+[THEN]
+
+0 [IF]
+: zcosh    zexp zdup 1/z z+ z2/ ;
+[ELSE]
+\ This version is reasonably accurate and preserves 
+\ signed zero on the real axis.
+: zcosh
+    FSINCOS [ fnoname ]    LITERAL ( f: cos[y]) F!
+        [ fnoname FLOAT+ ] LITERAL ( f: sin[y]) F!
+    FDUP FCOSH [ fnoname ] LITERAL F@ F*  ( f: x ch[x]cos[y])
+    FSWAP FSINH
+        [ fnoname FLOAT+ ] LITERAL F@ F*  ( f: ch[x]cos[y] sh[x]sin[y])
+;
+[THEN]
+
+0 [IF]
+: ztanh    zexp z^2 i* zdup 1E F- zswap 1E F+ z/ ;
+[ELSE]  \ This version, based on Kahan, preserves signed zero.
+: ztanh
+(
+            [1 + tan^2[y]] cosh[x] sinh[x] + i tan[y]
+  tanh[z] = -----------------------------------------
+                 1 + [1 + tan^2[y]] sinh^2[x]
+)
+    FTAN FDUP f^2 1E F+                 ( f: x t=tan[y] b=1+t^2)
+        [ fnoname ] LITERAL F!
+    FSWAP FDUP FSINH                    ( f: t x sh[x])
+        [ fnoname FLOAT+ ] LITERAL F!
+    FCOSH
+        [ fnoname FLOAT+ ] LITERAL F@   ( f: t ch[x] sh[x])
+    F* [ fnoname ] LITERAL F@ F* FSWAP  ( f: c=ch[x]sh[x]b t)
+    [ fnoname ] LITERAL F@
+        [ fnoname FLOAT+ ] LITERAL F@
+        f^2 F* 1E F+                    ( f: c t 1+b*sh^2[x])
+    z/f ;
+[THEN]
+
+: zcoth    ztanh 1/z ;
+
+: zsin     i* zsinh -i* ;
+: zcos     i* zcosh ;
+: ztan     i* ztanh -i* ;
+: zcot     i* zcoth  i* ;
 
 
-\ Rudimentary testing: ( answers verified by hand calculation -- km)
-\
-\ 	zvariable c1		( define complex variable c1)
-\	1e 0e c1 z!		( store 1+i0 in c1)
-\	z=1 c1 z!		( equivalent to previous line)
-\	c1 z@ z.		( prints 1 + i 0)
-\
-\	2e 3e c1 z!		( store 2+i3 in c1)
-\	c1 z@ conjg z.		( 2 + i -3)
-\	c1 z@ znegate z.	( -2 + i -3)
-\	c1 z@ i* z.		( -3 + i 2)
-\	c1 z@ (-i)* z.		( 3 + i -2)
-\	c1 z@ z^2 z.		( -5 + i 12) 
-\	c1 z@ zsqrt z.		( 1.67415 + i 0.895977)
-\	c1 z@ |z|^2 f.		( 13)
-\	c1 z@ |z| f.		( 3.60555)
-\	c1 z@ 7 z^n z.		( 6554 + i 4449)
-\	c1 z@ 2e z*f z.		( 4 + i 6)
-\	c1 z@ 2e z/f z.		( 1 + i 1.5)
-\	c1 z@ 1/z z.		( 0.153846 + i -0.230769)
-\	c1 z@ arg f.		( 0.982794)
-\	c1 z@ >polar f. f.	( 0.982794 3.60555)
-\	c1 z@ >polar polar> z.	( 2 + i 3)
-\	c1 z@ zexp z.		( -7.31511 + i 1.04274)
-\	c1 z@ zln z.		( 1.28247 + i 0.982794)
-\
-\	zvariable c2		
-\	2e 3e c1 z!		
-\	1e 5e c2 z!		
-\	c1 z@ c2 z@ z+ z.	( add c1 and c2, prints 3 + i 8)
-\	c1 z@ c2 z@ z- z.	( 1 + i -2)
-\	c1 z@ c2 z@ z* z.	( -13 + i 13)
-\	c1 z@ c2 z@ z/ z.	( 0.653846 + i -0.269231)
-\
+\ ------------------------------------------ INVERSE FUNCTIONS
 
+\ In the following, we use phrases like "1E x+" instead of
+\ "1E 0E z+", for stability on branch cuts involving signed
+\ zero.  This follows a suggestion by Kahan [2], and it actually
+\ makes a difference in every one of the functions.
+
+: zasinh   ( f: z -- ln[z+sqrt[[z+i][z-i]] )
+(
+This is more stable for signed zero than the version with z^2+1.
+)
+    zdup 1E F+   zover 1E F-   z* psqrt z+ pln
+;
+
+: zacosh   ( f: z -- 2ln[sqrt[[z+1]/2]+sqrt[[z-1]/2] )
+    zdup  1E x- z2/ psqrt
+    zswap 1E x+ z2/ psqrt
+    z+ pln z2*
+;
+
+: zatanh   ( f: z -- [ln[1+z]-ln[1-z]]/2 )
+    zdup  1E x+ pln
+    zswap 1E x- znegate pln
+    z- z2/
+;
+
+: zacoth  ( f: z -- [ln[-1-z]-ln[1-z]]/2 )
+    znegate zdup 1E x- pln
+    zswap 1E x+ pln
+    z- z2/
+;
+
+: zasin  ( f: z -- -iln[iz+sqrt[1-z^2]] )    i* zasinh -i* ;
+: zacos  ( f: z -- pi/2-asin[z] )            zasin znegate pi/2 x+ ;
+: zatan  ( f: z -- [ln[1+iz]-ln[1-iz]]/2i )  i* zatanh -i* ;
+: zacot  ( f: z -- [ln[[z+i]/[z-i]]/2i )    -i* zacoth -i* ;
+
+
+\ ------------------------------------------------- REFERENCES
+(
+1. M. Abramowitz and I. Stegun, Handbook of Mathematical
+   Functions with Formulas, Graphs, and Mathematical Tables, US
+   Government Printing Office, 10th Printing December 1972,
+   Secs. 4.4, 4.6.
+
+   http://www.convertit.com/Go/ConvertIt/Reference/AMS55.ASP
+
+2. William Kahan, "Branch cuts for complex elementary
+   functions", The State of the Art in Numerical Analysis, A.
+   Iserles and M.J.D. Powell, eds., Clarendon Press, Oxford,
+   1987, pp. 165-211.
+
+   http://www.cims.nyu.edu/~dbindel/class/cs279/slits02.pdf
+   http://www.cims.nyu.edu/~dbindel/class/cs279/slits34.pdf
+   http://www.cims.nyu.edu/~dbindel/class/cs279/slits56.pdf
+
+3. Robert M. Corless, James H. Davenport, David J. Jeffrey,
+   Stephen M. Watt, "'According to Abramowitz and Stegun' or
+   arcoth needn't be uncouth", ACM SIGSAM Bulletin, June, 2000,
+   pp. 58-65.
+
+   http://portal.acm.org/citation.cfm?doid=362001.362023
+   http://www.apmaths.uwo.ca/~djeffrey/Offprints/couth.pdf
+)
