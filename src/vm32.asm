@@ -2794,8 +2794,8 @@ _L_utmslash:
 	div ecx		; ut3/u
 	cmp eax, 0
 	jnz E_div_overflow
-	push ebx
 utmslash1:
+        push ebx
 	LDSP
 	mov [ebx-4*WSIZE], eax	; q3
 	mov [ebx-5*WSIZE], edx	; r3
