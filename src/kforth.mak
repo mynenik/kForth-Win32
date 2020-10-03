@@ -84,7 +84,7 @@ OBJS		= ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ kforth.OBJ
 
 RCFILES		= kforth.rc
 
-RESFILES	= 
+RESFILES	= kforth.RES
 
 HELPFILES	= 
 
@@ -174,16 +174,6 @@ kforth.DEF;
 .RC.RES: 
 	$(RC) $(RCDEFINES) $(RESFLAGS) $(INCLUDES) $*.rc -o$*.res
 
-.DLG.RES:
-	echo ^#include "windows.h" >$$$*.rc
-	echo ^IF EXIST "$*.h" >>$$$*.rc
-	echo ^#include "$*.h" >>$$$*.rc
-	echo ^#include "$*.dlg" >>$$$*.rc
-	$(RC) $(RCDEFINES) $(RESFLAGS) $(INCLUDES) $$$*.rc
-	-del $*.res
-	-ren $$$*.res $*.res
-
-
 
 all:	noteout createdir $(PRECOMPILE) $(SYMS) $(OBJS) $(INCLUDEDOBJS) $(POSTCOMPILE) $(TARGETDIR)\$(PROJ).$(PROJTYPE) $(POSTLINK) _done
 
@@ -225,8 +215,8 @@ kforth.DEF;
 <<
 !ENDIF
 
-			-ren $(TARGETDIR)\$$SCW$$.$(PROJTYPE) $(PROJ).$(PROJTYPE)
-			-echo $(TARGETDIR)\$(PROJ).$(PROJTYPE) built
+		-ren $(TARGETDIR)\$$SCW$$.$(PROJTYPE) $(PROJ).$(PROJTYPE)
+		-echo $(TARGETDIR)\$(PROJ).$(PROJTYPE) built
 
 _done:
 		REM  Project is up to date

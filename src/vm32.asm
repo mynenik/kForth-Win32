@@ -168,6 +168,9 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_nop, L_nop, L_nop, L_nop  ; 400 -- 403
           dd L_nop, L_uwfetch, L_ulfetch, L_slfetch ; 404 -- 407
           dd L_lstore, L_nop, L_nop, L_nop ; 408 -- 411
+          dd L_nop, L_nop, L_nop, L_nop  ; 412 -- 415
+          dd L_nop, L_nop, L_nop, L_nop  ; 416 -- 419
+          dd _CPP_vallot, _CPP_vallotquery, _CPP_vfree, L_nop ; 420 -- 423
 _DATA ENDS
 
 public _L_initfpu, _L_depth, _L_quit, _L_abort, _L_ret

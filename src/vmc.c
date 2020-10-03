@@ -58,14 +58,14 @@ extern char TIB[];
 extern char NumberBuf[];
 extern char ParseBuf[];
 
-int L_dnegate();
-int L_dplus();
-int L_dminus();
-int L_udmstar();
-int L_utmslash();
-int L_quit();
-int L_abort();
-int vm(byte*);
+extern int L_dnegate();
+extern int L_dplus();
+extern int L_dminus();
+extern int L_udmstar();
+extern int L_utmslash();
+extern int L_quit();
+extern int L_abort();
+extern int vm(byte*);
 
 // struct timeval ForthStartTime;
 unsigned long int ForthStartTime;
@@ -160,6 +160,23 @@ int C_fmax ()
 	GlobalSp += 2;
 	GlobalTp += 2;
 	return 0;
+}
+
+void* vallot (long unsigned int u)
+{
+  /* allocate read, write, execute memory; return start address
+   * if successful, or null */
+
+  void* p = VirtualAlloc( NULL, u, MEM_RESERVE | MEM_COMMIT,
+		  PAGE_EXECUTE_READWRITE);
+  return p;
+}
+
+int vfree (void* p)
+{
+   /* free virtual memory previously allocated with vallot() */
+   bool b = VirtualFree( p, 0, MEM_RELEASE );
+   return( !b );
 }
 
 int C_open ()
