@@ -127,7 +127,10 @@ variable read_count
 \ Delete the file named by c-addr, u
 \ Forth-94 File Access words 11.6.1.1190
 : delete-file
-        s" cmd.exe /c del " 2swap strcat strpck system ;
+        2dup strpck file-exists IF
+          s" cmd.exe /c del " 2swap strcat strpck system
+        ELSE 2drop 256 ( return code for "rm" under Linux )
+        THEN ;
 
 \ RENAME-FILE ( c-addr1 u1 c-addr2 u2 -- ior )
 \ Rename the file named c-addr,u1 to name given by c-addr2,u2
