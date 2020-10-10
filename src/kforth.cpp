@@ -27,8 +27,8 @@
 //
 //      kforth [name[.4th]] [-D] [-e string]
 //
-char* version = "1.6.6";
-char* Rls_Date = "2020-08-28";
+char* version = "1.6.6-3";
+char* Rls_Date = "2020-10-10";
 
 #include <iostream>
 #include <fstream>

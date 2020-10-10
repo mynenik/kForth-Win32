@@ -21,8 +21,8 @@
 public _GlobalSp, _GlobalTp, _GlobalIp, _GlobalRp, _GlobalRtp
 public _BottomOfStack, _BottomOfReturnStack, _BottomOfTypeStack
 public _BottomOfReturnTypeStack, _vmEntryRp, _Base, _State
-public _pTIB, _TIB, _WordBuf, _NumberCount, _NumberBuf
-public _JumpTable
+public _Precision, _pTIB, _TIB, _WordBuf
+public _NumberCount, _NumberBuf, _JumpTable
 
 EXTRN _Sleep@4:NEAR
 
