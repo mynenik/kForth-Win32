@@ -97,7 +97,7 @@ include qm/schr1d
 Also qm.potential
 Also qm.schr1d
 
-219474.6314e    fconstant  cm^-1/Eh  \ Hartree to wavenumber conversion
+219474.6313705e fconstant  cm^-1/Eh  \ Hartree to wavenumber conversion
 0.5291772083e   fconstant  A/a0  \ Bohr radius to Angstroms conversion
 1e              fconstant  m_e   \ mass of electron in atomic units
 \ 1836.15267247e  fconstant  m_p \ mass of proton in a.u. (obsolete)
