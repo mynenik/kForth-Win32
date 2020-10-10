@@ -145,7 +145,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_unloop, L_nop, L_nop, L_blank  ; 308 -- 311
           dd L_slashstring, _C_trailing, _C_parse, L_nop ; 312 -- 315
           dd L_nop, L_nop, L_nop, L_nop  ; 316 -- 319
-          dd L_nop, L_nop, L_nop, L_nop  ; 320 -- 323
+          dd _C_dlopen, _C_dlerror, _C_dlsym, _C_dlclose  ; 320 -- 323
           dd L_nop, _CPP_alias, _C_system, _C_chdir ; 324 -- 327
           dd _C_timeanddate, L_nop, _CPP_wordlist, _CPP_forthwordlist ; 328 -- 331
           dd _CPP_getcurrent, _CPP_setcurrent, _CPP_getorder, _CPP_setorder ; 332 -- 335

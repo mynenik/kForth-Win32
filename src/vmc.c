@@ -312,6 +312,65 @@ int C_ioctl ()
 }
 /*----------------------------------------------------------*/
 
+int C_dlopen ()
+{
+   /* stack: ( azLibName flag -- handle | NULL) */
+   unsigned flags;
+   HMODULE handle;
+   char *pLibName;
+
+   DROP
+   flags = TOS;   // flags is ignored
+   DROP
+   CHK_ADDR
+   pLibName = *((char**) GlobalSp);  // pointer to a null-terminated string
+
+   handle = LoadLibraryA((LPCSTR) pLibName);
+   PUSH_IVAL((int) handle)
+   return 0;
+}
+
+int C_dlerror ()
+{
+   /* stack: ( -- addrz) ; Returns address of null-terminated string*/
+   static char errMsg[16];
+   memset(errMsg, 0, 16);
+   long int ecode = GetLastError();
+   _snprintf(errMsg, 15, "Error  %d", ecode);
+   errMsg[15] = 0; 
+   PUSH_ADDR((int) errMsg)
+   return 0;
+}
+
+int C_dlsym ()
+{
+    /* stack: ( handle azsymbol -- addr ) */
+    HMODULE handle;
+    char *pSymbol;
+    void *pSymAddr;
+
+    DROP
+    CHK_ADDR
+    pSymbol = *((char**)GlobalSp);  // pointer to a null-terminated string
+    DROP
+    handle = TOS;
+
+    pSymAddr = GetProcAddress(handle, (const char*) pSymbol);
+    PUSH_ADDR((int) pSymAddr)
+    return 0;
+}
+
+int C_dlclose ()
+{
+    /* stack: ( handle -- error | 0) */
+    HMODULE handle;
+    INC_DSP
+    handle = TOS;
+    TOS = ( FreeLibrary(handle) == 0) ;
+    DEC_DSP
+    return 0;
+}
+
 void save_term ()
 {
   ;
