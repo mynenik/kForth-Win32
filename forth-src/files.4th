@@ -1,7 +1,7 @@
-\ files.4th (Win32 version)
+\ files.4th
 \
-\ This code provides kForth with most of the Forth-94 standard
-\ File Access word set.
+\ This code provides kForth with most of the Forth standard 
+\ File Access wordset (Forth-94 / Forth-2012)
 \
 \ kForth provides the built-in low level file access words:
 \
@@ -29,21 +29,23 @@
 \
 \ Copyright (c) 1999--2020 Krishna Myneni
 \
-\ This software is provided under the terms of the GNU General
-\ Public License.
+\ This software is provided under the terms of the GNU Affero
+\ General Public License (AGPL) v 3.0 or later.
 \
 \ Requires:
-\
+\  ans-words.4th
 \  strings.4th
 \
 
 base @
 hex
-0 constant R/O  \ Forth-94 11.6.1.2054
-1 constant W/O  \ Forth-94 11.6.1.2425
-2 constant R/W  \ Forth-94 11.6.1.2056
+  0 constant R/O  \ Forth-94/2012 11.6.1.2054
+  1 constant W/O  \ Forth-94/2012 11.6.1.2425
+  2 constant R/W  \ Forth-94/2012 11.6.1.2056
 
-A constant EOL
+  A constant EOL
+
+[DEFINED] _WIN32_ [IF]
 
  100 constant  O_CREAT
  400 constant  O_EXCL
@@ -52,9 +54,19 @@ A constant EOL
 4000 constant  O_TEXT
 8000 constant  O_BINARY
 
-0 constant SEEK_SET
-1 constant SEEK_CUR
-2 constant SEEK_END
+[ELSE]  \ Linux
+
+ 40 constant O_CREAT
+ 80 constant O_EXCL
+200 constant O_TRUNC
+400 constant O_APPEND
+  0 constant O_BINARY
+
+[THEN]
+
+  0 constant SEEK_SET
+  1 constant SEEK_CUR
+  2 constant SEEK_END
 base !
 create EOL_BUF 4 allot
 EOL EOL_BUF c!
@@ -62,58 +74,58 @@ EOL EOL_BUF c!
 
 \ BIN ( fam1 -- fam2 )
 \ Modify file access method to select binary access mode
-\ Forth-94 File Access word set 11.6.1.2054
+\ Forth-94/2012 File Access word set 11.6.1.2054
 : BIN O_BINARY or ;
 
 variable read_count
 
 \ CREATE-FILE  ( c-addr u fam -- fileid ior )
 \ Create a file with the specified name.
-\ Forth-94 File Access word set 11.6.1.1010
+\ Forth-94/2012 File Access word set 11.6.1.1010
 : create-file
 	>r strpck r> O_CREAT or open
 	dup 0> invert ;
 
 \ OPEN-FILE  ( c-addr u fam -- fileid ior )
 \ Open the file with the specified name and access method.
-\ Forth-94 File Access word set 11.6.1.1970
+\ Forth-94/2012 File Access word set 11.6.1.1970
 : open-file
 	>r strpck r> open
 	dup 0> invert ;
 
 \ CLOSE-FILE ( fileid -- ior )
 \ Close the file identified by fileid.
-\ Forth-94 File Access word set 11.6.1.0900
+\ Forth-94/2012 File Access word set 11.6.1.0900
 : close-file  close ;
 
 \ READ-FILE ( c-addr u1 fileid -- u2 ior )
 \ Read u1 characters from specified file into buffer at c-addr.
-\ Forth-94 File Access word set 11.6.1.2080
+\ Forth-94/2012 File Access word set 11.6.1.2080
 : read-file  -rot read dup -1 = ;
 
 \ WRITE-FILE ( c-addr u fileid -- ior )
 \ Write u characters to file from buffer at c-addr.
-\ Forth-94 File Access word set 11.6.1.2480
+\ Forth-94/2012 File Access word set 11.6.1.2480
 : write-file  -rot write 0< ;
 
 \ FILE-POSITION ( fileid -- ud ior )
 \ Return the current file position, ud, for the specified file.
-\ Forth-94 File Access word set 11.6.1.1520
+\ Forth-94/2012 File Access word set 11.6.1.1520
 : file-position
 	0 SEEK_CUR lseek dup -1 = >r s>d r> ;
 
 \ REPOSITION-FILE ( ud fileid -- ior )
 \ Change the current file position to ud for the specified file.
-\ Forth-94 File Access word set 11.6.1.2142
+\ Forth-94/2012 File Access word set 11.6.1.2142
 : reposition-file
 	-rot drop SEEK_SET lseek 0< ;
 
 \ FILE-SIZE ( fileid -- ud ior )
 \ Return the size in pchars, ud, for the specified file.
-\ Forth-94 File Access word set 11.6.1.1522
+\ Forth-94/2012 File Access word set 11.6.1.1522
 : file-size
-	dup >r r@ file-position drop 2>r
-	0 SEEK_END lseek dup -1 = >r s>d r> 
+	dup >r r@ file-position drop 2>r  
+	0 SEEK_END lseek dup -1 = >r s>d r>
 	2r> r> reposition-file drop ;
 
 \ FILE-EXISTS ( ^filename -- flag )
@@ -125,45 +137,57 @@ variable read_count
 
 \ DELETE-FILE ( c-addr u -- ior )
 \ Delete the file named by c-addr, u
-\ Forth-94 File Access words 11.6.1.1190
+\ Forth-94/2012 File Access words 11.6.1.1190
+[DEFINED] _WIN32_ [IF]
 : delete-file
         2dup strpck file-exists IF
           s" cmd.exe /c del " 2swap strcat strpck system
         ELSE 2drop 256 ( return code for "rm" under Linux )
         THEN ;
+[ELSE]
+: delete-file
+        s" rm " 2swap strcat strpck system ; 
+[THEN]
 
 \ RENAME-FILE ( c-addr1 u1 c-addr2 u2 -- ior )
 \ Rename the file named c-addr,u1 to name given by c-addr2,u2
-\ Forth-94 File Access Ext word set 11.6.2.2130
+\ Forth-94/2012 File Access Ext word set 11.6.2.2130
 \
 \ RENAME-FILE has a limit for the sum of the two filenames
-\ to be less than 250 pchars because of limitations in the
+\ to be less than 250 pchars because of limitations in the 
 \ argument to SYSTEM.
+[DEFINED] _WIN32_ [IF]
 : rename-file
-    2>r 2>r s" cmd.exe /c rename " 2r> strcat s"  " strcat 2r> strcat
+    2>r 2>r s" cmd.exe /c rename " 
+    2r> strcat s"  " strcat 2r> strcat
     strpck system ;
+[ELSE]
+: rename-file
+    2>r 2>r s" mv " 2r> strcat s"  " strcat 2r> strcat 
+    strpck system ;
+[THEN]
 
 \ READ-LINE ( c-addr u1 fileid -- u2 flag ior )
 \ Read the next line from the file into memory at c-addr
-\ Forth-94 File Access word set 11.6.1.2090
+\ Forth-94/2012 File Access word set 11.6.1.2090
 : read-line
 	-rot 0 read_count !
 	0 ?do
 	  2dup 1 read
-          dup 0< IF  >r 2drop read_count @ false r> unloop exit THEN
-          0= IF    \ reached EOF
-            read_count @ 0= IF 2drop 0 false 0 unloop exit
-                            ELSE leave THEN
+	  dup 0< IF  >r 2drop read_count @ false r> unloop exit THEN
+	  0= IF    \ reached EOF
+	    read_count @ 0= IF 2drop 0 false 0 unloop exit 
+			    ELSE leave THEN 
           THEN
-          dup c@ EOL = IF 2drop read_count @ true 0 unloop exit THEN
-          1+
-          1 read_count +!
+	  dup c@ EOL = IF 2drop read_count @ true 0 unloop exit THEN
+	  1+
+	  1 read_count +!
 	loop
 	2drop read_count @ true 0 ;
 
 \ WRITE-LINE ( c-addr u fileid -- ior )
 \ Write u characters from c-addr followed by a line terminator
-\ Forth-94 File Access word set 11.6.1.2485
+\ Forth-94/2012 File Access wordset 11.6.1.2485
 : write-line
 	dup >r write-file
 	EOL_BUF 1 r> write-file
@@ -171,6 +195,6 @@ variable read_count
 
 \ FLUSH-FILE ( fileid -- ior )
 \ Force any buffered information written to file to be stored on disk.
-\ Forth-94 File Access word set 11.6.2.1560
+\ Forth-94/2012 File Access word set 11.6.2.1560
 : flush-file fsync ;
 

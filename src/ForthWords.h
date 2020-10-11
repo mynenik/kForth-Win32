@@ -12,6 +12,9 @@
 // The minimum search-order set of words
 WordTemplate RootWords[] =
 {
+#ifdef _WIN32_
+    { "_WIN32_",        OP_TRUE,          0 },
+#endif
     { "ORDER",          OP_ORDER,         0 },
     { "SET-ORDER",      OP_SETORDER,      NONDEFERRED },
     { "FORTH-WORDLIST", OP_FORTHWORDLIST, 0 },

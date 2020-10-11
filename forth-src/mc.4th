@@ -33,7 +33,7 @@ PAGESIZE MC_NPAGES * constant MC_BUFSIZE
 0 ptr MC-Here0
 
 \ Allocate buffer 
-1 [IF]  \ Win32
+[DEFINED] _WIN32_ [IF]  \ Win32
 0 MC_BUFSIZE MEM_RESERVE MEM_COMMIT or PAGE_READWRITE valloc
 [ELSE]  \ Linux 
 0 MC_BUFSIZE PROT_READ PROT_WRITE or MAP_ANONYMOUS MAP_PRIVATE or
@@ -57,7 +57,7 @@ MC-Here0 ptr MC-Here
 \ flag_rw = TRUE,  the page is allowed read-executable
 \ flag_rw = FALSE, the page is read-writable
 \ return true if successful
-1 [IF]  \ Win32
+[DEFINED] _WIN32_ [IF]  \ Win32
 variable OldProt
 : MC-Executable ( a_mc flag_rw -- flag )
     >r PAGEMASK and PAGESIZE

@@ -289,7 +289,7 @@ int OpenForth ()
 
     // The Dictionary initially contains the Root, Forth, and Assembler 
     // wordlists.
-    Voc_Root.Initialize(RootWords, 5);
+    Voc_Root.Initialize(RootWords, 6);
     Dictionary.push_back(&Voc_Root);
     Voc_Forth.Initialize(ForthWords, NUMBER_OF_INTRINSIC_WORDS);
     Dictionary.push_back(&Voc_Forth);
