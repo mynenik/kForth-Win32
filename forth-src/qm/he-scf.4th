@@ -62,18 +62,17 @@
 
 include ans-words
 include modules.fs
-\ include syscalls
-\ include mc
-\ include asm-x86
-\ include fpu-x86
+include syscalls
+include mc
+include asm-x86
+include fpu-x86
 include strings
 include fsl/fsl-util
 include fsl/dynmem
 include fsl/complex
 include fsl/quadratic
 include fsl/polrat
-\ include fsl/extras/numerov_x86
-include fsl/extras/numerov
+include fsl/extras/numerov_x86
 include fsl/extras/find
 include fsl/extras/read_xyfile
 include fsl/extras/array-utils0
