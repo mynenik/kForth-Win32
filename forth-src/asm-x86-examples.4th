@@ -4,21 +4,15 @@
 \
 \ K. Myneni, 18 Oct 2001
 \
-\ Requires: asm-x86.4th, dump.4th
-\ Revisions:
-\
-\	2004-10-20  additional examples  km
-\       2004-10-21  fp examples; changed stack reg to ebx  km
-\       2004-10-22  complex number examples  km
-\	2004-10-26  further fpu instruction tests  km
-\       2006-03-13  changed BEGIN, to DO, in add-loop; added new examples for
-\                    BEGIN, ... WHILE, ... REPEAT, and use of LABELs and JMP, km
-\       2009-05-24  added cpu info words  km
+\ Requires: ans-words.4th
 
+include modules.fs
+include syscalls.4th
+include mc.4th
 include asm-x86.4th
 include dump
 
-: SEE ( "name" -- ) ' >BODY 256 DUMP ;
+: SEE-CODE ( "name" -- ) ' >MC-Code 256 DUMP ;
 
 variable v
 
@@ -26,11 +20,9 @@ CODE adrop ( n -- | drop an item from the Forth stack using assembly code )
 	TCELL # ebx add,
 END-CODE
 
-
 CODE add5  ( n -- m | add 5 to item on top of Forth stack)
 	5 # 0 [ebx] add, 
-END-CODE
-	
+END-CODE	
 		
 CODE add   ( n m -- sum | assembly code "+" )
         0 [ebx] eax mov,
@@ -85,7 +77,6 @@ Label: doagain
 	 ecx v #@    mov,
 	 eax eax     xor,
 END-CODE
-
 
 CODE v> ( n -- flag | test n > v)
 	0 [ebx] eax mov,
@@ -178,7 +169,6 @@ CODE f-pi ( f1 -- f2 | f2 = f1 - pi )
      0 [ebx] fstp,
 END-CODE
 
-
 \ -------------- FPU Control, Environment, and Status -------
 
 CREATE fpu-control       2 ALLOT
@@ -252,8 +242,7 @@ CODE z*  ( z1 z2 -- z3 | multiply two complex numbers from top of Forth stack )
 	0 [ebx] fstp,
 	8 [ebx] fstp,
 END-CODE
-		 
-	
+
 
 \ Following does not work yet. There is a problem in adding
 \   new items to the top of the stack with the current interface

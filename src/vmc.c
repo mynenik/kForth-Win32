@@ -162,22 +162,65 @@ int C_fmax ()
 	return 0;
 }
 
-void* vallot (long unsigned int u)
+// Allocate virtual read-write memory; return start address
+// if successful, or -1 on error.
+int C_valloc ()
 {
-  /* allocate read, write, execute memory; return start address
-   * if successful, or null */
+  /* stack: ( anew usize ntype nprot -- a|0 ) */
+  
+  DROP
+  long int np = TOS;
+  DROP
+  long int nt = TOS;
+  DROP
+  unsigned long int u = (unsigned long int) TOS;
+  DROP
+  unsigned long int au = (unsigned long int) TOS;
 
-  void* p = VirtualAlloc( NULL, u, MEM_RESERVE | MEM_COMMIT,
-		  PAGE_EXECUTE_READWRITE);
-  return p;
+  void* p = VirtualAlloc( au, u, nt, np );
+		
+  if (p == 0) p = -1;
+  TOS = (int) p;
+  DEC_DSP
+  STD_ADDR  
+  return 0;
 }
 
-int vfree (void* p)
+// Free virtual memory previously allocated with VALLOCATE.
+// Return 0 on success.
+int C_vfree ()
 {
-   /* free virtual memory previously allocated with vallot() */
+   /* stack: ( a -- ior ) */
+   DROP
+   void* p = TOS;  // <== fixme ==  check address!
    bool b = VirtualFree( p, 0, MEM_RELEASE );
-   return( !b );
+   TOS = (!b);
+   DEC_DSP
+   STD_IVAL
+   return 0;
 }
+
+// Set protection for virtual memory region starting at
+// address a and usize bytes. The new protection value
+// is newprot, and aoldprot is the address for storing
+// the old protection value. Return 0 on success.
+int C_vprotect ()
+{
+   /* stack: ( a usize newprot aoldprot -- ior ) */
+   DROP
+   long int* aop = TOS;  // <== fixme == check address!
+   DROP
+   unsigned long int np = TOS;
+   DROP
+   unsigned long int u = TOS;
+   DROP
+   void* p = (void*) TOS;  // <== fixme == check address!
+   bool b = VirtualProtect( p, u, np, aop );
+   TOS = (!b);
+   DEC_DSP
+   STD_IVAL
+   return 0;
+} 
 
 int C_open ()
 {

@@ -68,8 +68,6 @@ extern "C" {
   int   C_sharps(void);
   int   C_sharpbracket(void);
   int   C_word(void);
-  void* vallot(unsigned long int);
-  int   vfree(void*);
 
   // vm functions provided by vm.s/vm-fast.s
 
@@ -1461,67 +1459,6 @@ int CPP_queryallot ()
     }
   return e;
 }
-
-int CPP_vallot()
-{
-  // stack: ( u -- | allot u bytes of read/write/exec memory )
-  int e = 0;
-  DROP
-  if (GlobalSp > BottomOfStack) 
-    return E_V_STK_UNDERFLOW;
-#ifndef __FAST__
-  if (*GlobalTp != OP_IVAL)
-    return E_V_BADTYPE;  // need an int
-#endif
-
-  WordIndex id = pCompilationWL->end() - 1;
-  unsigned long int u = TOS;
-  if (u) {
-      if (id->Pfa == NULL) { 
-	  id->Pfa = vallot(u);
-	  // if (id->Pfa) memset (id->Pfa, 0, n); 
-
-	  // Provide execution code to the word to return its Pfa
-  	  byte *bp = new byte[WSIZE+2];
-  	  id->Cfa = bp;
-  	  bp[0] = OP_ADDR;
-  	  *((int*) &bp[1]) = (long int) id->Pfa;
-  	  bp[WSIZE+1] = OP_RET;
-	}
-      else 
-	e = E_V_REALLOT;
-    }
-  else
-    id->Pfa = NULL;
-
-  return e;
-}
-
-int CPP_vallotquery ()
-{
-  // stack: ( u -- a | allot u bytes of read/write/exec memory )
-  // Return starting address on the stack, if successful or NULL, if not.
-
-  int e = CPP_vallot();
-  if (!e) {
-      // Get last word's Pfa and leave on the stack
-      WordIndex id = pCompilationWL->end() - 1;
-      PUSH_ADDR((long int) id->Pfa)
-    }
-  return e;
-}
-
-int CPP_vfree ()
-{
-    // stack: ( a -- ior | free the allocated region at address a )
-    DROP
-    CHK_ADDR
-    void *p = (void*) TOS;
-    int e = vfree(p);
-    PUSH_IVAL(e)
-    return 0;
-}
-
 //---------------------------------------------------------------
 
 int CPP_create ()
