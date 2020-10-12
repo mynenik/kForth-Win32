@@ -62,9 +62,11 @@ WordTemplate ForthWords[] =
     { "ALLOT",     OP_ALLOT,        NONDEFERRED },
     { "?ALLOT",    OP_QUERYALLOT,   NONDEFERRED },
     { "ALLOT?",    OP_QUERYALLOT,   NONDEFERRED },
+#ifdef _WIN32_
     { "VALLOC",    OP_VALLOC,       NONDEFERRED },
     { "VFREE",     OP_VFREE,        NONDEFERRED },
     { "VPROTECT",  OP_VPROTECT,     NONDEFERRED },
+#endif
     { "LITERAL",   OP_LITERAL,      IMMEDIATE },
     { "2LITERAL",  OP_2LITERAL,     IMMEDIATE },
     { "SLITERAL",  OP_SLITERAL,     IMMEDIATE },
@@ -181,20 +183,26 @@ WordTemplate ForthWords[] =
     { "EXECUTE",   OP_EXECUTE,      0 },
     { "CALL",      OP_CALL,         0 },
     { "SYSTEM",    OP_SYSTEM,       0 },
-//    { "SYSCALL",   OP_SYSCALL,      0 },
+#ifndef _WIN32_
+    { "SYSCALL",   OP_SYSCALL,      0 },
+#endif
     { "DLOPEN",    OP_DLOPEN,       0 },
     { "DLERROR",   OP_DLERROR,      0 },
     { "DLSYM",     OP_DLSYM,        0 },
     { "DLCLOSE",   OP_DLCLOSE,      0 },
-//    { "FORTH-SIGNAL", OP_FORTHSIGNAL, 0 },
-//    { "RAISE",     OP_RAISE,        0 },
-//    { "SET-ITIMER", OP_SETITIMER,   0 },
-//    { "GET-ITIMER", OP_GETITIMER,   0 },
+#ifndef _WIN32_
+    { "FORTH-SIGNAL", OP_FORTHSIGNAL, 0 },
+    { "RAISE",     OP_RAISE,        0 },
+    { "SET-ITIMER", OP_SETITIMER,   0 },
+    { "GET-ITIMER", OP_GETITIMER,   0 },
+#endif
     { "TIME&DATE", OP_TIMEANDDATE,  0 },
     { "MS",        OP_MS,           0 },
     { "MS@",       OP_MSFETCH,      0 },
-//    { "US",        OP_US,           0 },
-//    { "US2@",      OP_US2FETCH,     0 },
+#ifndef _WIN32_
+    { "US",        OP_US,           0 },
+    { "US2@",      OP_US2FETCH,     0 },
+#endif
     { "CHDIR",     OP_CHDIR,        0 },
     { ">FILE",     OP_TOFILE,       NONDEFERRED },
     { "CONSOLE",   OP_CONSOLE,      NONDEFERRED },
