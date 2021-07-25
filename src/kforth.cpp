@@ -2,7 +2,7 @@
 //
 // The kForth environment
 //
-// Copyright (c) 1998--2020 Krishna Myneni and David P. Wallace, 
+// Copyright (c) 1998--2021 Krishna Myneni and David P. Wallace, 
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU 
@@ -27,8 +27,8 @@
 //
 //      kforth [name[.4th]] [-D] [-e string]
 //
-char* version = "1.6.7";
-char* Rls_Date = "2020-10-11";
+char* version = "1.7.0";
+char* Rls_Date = "2021-07-24";
 
 #include <iostream>
 #include <fstream>
@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
       }
       pSS = new istringstream(initial_commands.str());
     }
+
     if (debug) {
        cout << '\n' << nWords << " words defined." << endl;
        cout << "Jump Table address:  " << &JumpTable << endl;
@@ -120,11 +121,10 @@ int main(int argc, char *argv[])
     while (1) {
         // Obtain commands and execute
         do {
-	    if (! pSS)
-	    {
-		cin.getline( input_line, 1024 );
-            	pSS = new istringstream(input_line);
-	    }
+	    cin.getline( input_line, 1024 );
+	    if (cin.fail()) CPP_bye();
+	    strncpy(s, input_line, 255);
+            pSS = new istringstream(s);
 	    SetForthInputStream (*pSS);	    
             ec = ForthCompiler (&op, &line_num);
 	    delete pSS;

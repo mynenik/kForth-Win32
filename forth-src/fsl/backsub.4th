@@ -34,18 +34,19 @@
 \   2010-04-30  km;  uncommented Private:
 \   2011-09-16  km;  use Neal Bridges' anonymous modules interface 
 \   2012-02-19  km;  use KM/DNW's modules library
+\   2021-05-16  km;  updated for use with separate fp stack
 \ =====================================================================
 \ The is the kForth version, which requires the following files:
 \
 \  ans-words.4th
 \  fsl-util.4th
 \  dynmem.4th
-\  struct.4th       \ The Gforth structures package is used
-\  lufact.4th       \   in place of the FSL structures package.
+\  struct-200x.4th  \ Forth 200x structures are used in place of
+\  lufact.4th       \   the FSL structures package.
 \
 \ ======================================================================
 
-CR .( BACKSUB           V1.2f          19 February  2012   EFC )
+CR .( BACKSUB           V1.2g          16 May       2021   EFC )
 BEGIN-MODULE
 BASE @ DECIMAL
 
@@ -86,7 +87,7 @@ FVARIABLE temp
        0 DO
             b{ pivot{ I } @ } DUP F@ temp F!
 
-            b{ I } F@ ROT F!
+            b{ I } SWAP >R F@ R> F!
 
             DUP 0< IF  temp F@ F0= 0= IF  DROP I THEN
                     ELSE
@@ -167,8 +168,14 @@ BASE !
 END-MODULE
 
 TEST-CODE? [IF]   \ test code ==============================================
-[undefined] LUFACT      [IF] include lufact  [THEN]
+[undefined] LUFACT  [IF] include fsl/lufact  [THEN]
+[undefined] T{      [IF] include ttester [THEN]
+[undefined] CompareArrays [IF] include fsl/fsl-test-utils [THEN]
 BASE @ DECIMAL
+
+1e-15 rel-near F!
+1e-15 abs-near F!
+set-near
 
 3 3 FLOAT matrix mat{{
 3 3 FLOAT matrix lmat{{

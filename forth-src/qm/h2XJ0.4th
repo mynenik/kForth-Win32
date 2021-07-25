@@ -68,25 +68,31 @@
 \                  ref. 7; updated m_p from ref. 8.
 \   2017-07-25  km fp number formatting and output words removed
 \                  to strings.4th, and renamed.
+\   2020-09-28  km updated conversion factor from Hartrees to cm^-1
 \
-\ Copyright (c) 2010--2017 Krishna Myneni, http://ccreweb.org
+\ Copyright (c) 2010--2020 Krishna Myneni, krishna.myneni@ccreweb.org
 \
 \ This code may be used for any purpose as long as the copyright
 \ notice above is preserved.
 \
 
 include ans-words
-include modules.fs
+include modules
+1 cells 4 = [IF]
 include syscalls
 include mc
 include asm-x86
 include fpu-x86
+[THEN]
 include strings
 include fsl/fsl-util
 include fsl/dynmem
 include fsl/polrat
+1 cells 4 = [IF]
 include fsl/extras/numerov_x86
-\ include fsl/extras/numerov
+[ELSE]
+include fsl/extras/numerov
+[THEN]
 include fsl/extras/find
 include fsl/extras/read_xyfile
 include fsl/extras/array-utils0
@@ -118,8 +124,8 @@ variable Nmesh
 8192 9 setup-mesh Nmesh !
 
 \ Set the effective mass of the particle in the potential well
-m_p 2e F/ set-particle-mass  ( reduced mass in the B-O approx. )
-\ m_p m_e F+ 2e F/  set-particle-mass  \ reduced mass of H_2
+\ m_p 2e F/ set-particle-mass  ( reduced mass in the B-O approx. )
+m_p m_e F+ 2e F/  set-particle-mass  \ reduced mass of H_2
 
 -1e    fconstant V_inf   \ potential energy in Hartrees at R=infinity
                          \ (this is the energy of two separated H atoms)

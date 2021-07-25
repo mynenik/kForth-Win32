@@ -17,8 +17,7 @@
 \     ansi.4th 
 \     dump.4th
 \
-\ Copyright (c) 2002--2020 Krishna Myneni, Creative Consulting
-\   for Research and Education
+\ Copyright (c) 2002--2021 Krishna Myneni
 \
 \ Provided under the GNU Lesser General Public License (LGPL)
 \
@@ -47,8 +46,13 @@
 \   2011-02-05  km  removed [DEFINED] and [UNDEFINED], now intrinsic 
 \   2020-01-21  km  added SYNONYM
 \   2020-01-25  km  revised defn. of VALUE for improved efficiency.
+\   2021-05-08  km  added defn. of F~ for 64-bit separate fp stack.
+\   2021-07-11  km  add DEFER@ and DEFER! and ACTION-OF.
+\                   use standard definition of IS .
+\   2021-07-13  km  added alignment words (for structures support).
 BASE @
 DECIMAL
+
 \ ============== From the CORE wordset
 
 : SPACE BL EMIT ;
@@ -61,20 +65,16 @@ CREATE PAD 512 ALLOT
 : TO ' >BODY STATE @ IF POSTPONE LITERAL POSTPONE ! ELSE ! THEN ; IMMEDIATE
 : VALUE CREATE 1 CELLS ?ALLOT ! IMMEDIATE DOES> POSTPONE LITERAL POSTPONE @ ;
 
-\ ============ From the FLOATING EXT wordset
+\ ============== Alignment words: from CORE and Extended Wordsets
+: UNITS-ALIGNED ( a xt -- a' )
+   >R ?DUP IF 
+     1- 1 R@ EXECUTE / 1+ R> EXECUTE 
+   ELSE R> DROP 0 THEN ;
 
-: F~ ( f1 f2 f3 -- flag )
-     FDUP 0e F> 
-     IF 2>R F- FABS 2R> F<
-     ELSE FDUP F0=
-       IF FDROP		  \ are f1 and f2 *exactly* equal 
-         ( F=)		  \ F= cannot distinguish between -0e and 0e
-	 D=
-       ELSE FABS 2>R FOVER FABS FOVER FABS F+ 2>R
-         F- FABS 2R> 2R> F* F<
-       THEN
-     THEN ;
- 
+: ALIGNED   ( a -- a' ) ['] CELLS   UNITS-ALIGNED ;
+: FALIGNED  ( a -- a' ) ['] FLOATS  UNITS-ALIGNED ;
+: SFALIGNED ( a -- a' ) ['] SFLOATS UNITS-ALIGNED ;
+: DFALIGNED ( a -- a' ) ['] DFLOATS UNITS-ALIGNED ;
 
 \ ============ From the PROGRAMMING TOOLS wordset
 
@@ -121,6 +121,42 @@ CREATE PAD 512 ALLOT
 : SYNONYM ( "<newname>" "<oldname>" -- )
    CREATE ' 1 CELLS ?ALLOT ! DOES> A@ EXECUTE ; 
 
+\ ============ From the FLOATING EXT wordset
+
+[DEFINED] FDEPTH [IF]
+\ Separate FP stack version of F~
+fvariable r3
+fvariable rhs
+1 CELLS 8 = [IF]  \ 64-bit, separate stack version
+: F~ ( -- flag ) ( F: r1 r2 r3 -- )
+    fdup r3 f!  \ ( -- flag1 ) ( F: -- r1 r2 )
+    f0> IF  f- fabs r3 f@ f<
+    ELSE
+      r3 f@ 
+      f0= IF  
+        fp@ dfloat+ 
+        dup >r @ r> dfloat+ @ =
+        f2drop
+      ELSE  
+        fover fabs fover fabs f+ r3 f@ fabs f* rhs f!
+        f- fabs rhs f@ f<
+      THEN
+    THEN ;
+[THEN]
+[ELSE]
+\ Integrated stack, 32-bit version of F~
+: F~ ( r1 r2 r3 -- flag )
+     FDUP F0> 
+     IF 2>R F- FABS 2R> F<
+     ELSE FDUP F0=
+       IF FDROP		  \ are f1 and f2 *exactly* equal 
+         ( F=)		  \ F= cannot distinguish between -0e and 0e
+	 D=
+       ELSE FABS 2>R FOVER FABS FOVER FABS F+ 2>R
+         F- FABS 2R> 2R> F* F<
+       THEN
+     THEN ;
+[THEN]
 
 \ ============= From the EXCEPTION wordset
 ( see DPANS94, sec. A.9 )
@@ -155,16 +191,26 @@ variable handler
 \ ============= Forth 200x Standard Words
 
 : DEFER  ( "name" -- )
-      CREATE 1 CELLS ?ALLOT ['] ABORT SWAP ! DOES> A@ EXECUTE ;
+      CREATE 1 CELLS ?ALLOT ['] ABORT SWAP ! 
+      DOES> ( ... -- ... ) A@ EXECUTE ;
 
-: IS    ( xt "name" -- )
-      '
-      STATE @ IF
-        postpone LITERAL postpone >BODY postpone !
-      ELSE
-        >BODY !
-      THEN ; IMMEDIATE
+: DEFER@ ( xt1 -- xt2 )  >BODY A@ ;
+: DEFER! ( xt2 xt1 -- )  >BODY ! ;
 
+: IS  ( xt "name" -- )
+    STATE @ IF
+      POSTPONE ['] POSTPONE DEFER!
+    ELSE
+      ' DEFER!
+    THEN ; IMMEDIATE
+
+: ACTION-OF ( "name" -- xt )
+    STATE @ IF
+      POSTPONE ['] POSTPONE DEFER@
+    ELSE
+      ' DEFER@
+    THEN ; IMMEDIATE
+ 
 \ === Non-standard words commonly needed for kForth programs ===
 : PTR ( a "name" -- ) CREATE 1 CELLS ALLOT? ! DOES> A@ ;
 

@@ -29,7 +29,7 @@
         dup 1 <=
       then 
     else
-      drop 1 true 
+      dup 1 > IF drop 1 true ELSE false THEN 
     then
 ;
 
@@ -43,11 +43,11 @@
     cr
 ;
 
-: list_primes ( n -- | list all the prime numbers from 1 to n )
+: list_primes ( n -- | list all the prime numbers from 2 to n )
     abs
     dup 0>
     if 
-      1+ 1 do
+      1+ 2 do
         i ?prime 
 	if 
 	  i . cr 

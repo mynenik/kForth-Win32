@@ -8,9 +8,8 @@
 \   License.
 \
 \ Required files:
-\       ans-words.4th
 \	strings.4th
-\	files.4th
+\	files(w).4th
 \
 \ Usage:
 \	dos2unix	-- user is prompted to enter input and output names
@@ -21,7 +20,6 @@
 \	12-21-2000  fixed null line problem  KM
 \       09-28-2005  updated line-by-line due to fix for read-line in files.4th  KM
 \
-include ans-words
 include strings
 include files
 

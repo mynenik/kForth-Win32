@@ -1,6 +1,6 @@
 ; vm32.asm
 ;
-; The kForth Virtual Machine
+; The assembler portion of kForth 32-bit Virtual Machine
 ;
 ; Copyright (c) 1998--2020 Krishna Myneni
 ;
@@ -1395,9 +1395,10 @@ L_calladdr:
 	mov ecx, ebp ; address to execute (intrinsic Forth word or other)
 	add ebp, 3
 	mov _GlobalIp, ebp
-	call [ecx]   ; <== fixme ==
-	mov ebp, _GlobalIp
-	ret
+        jmp [ecx]
+;	call [ecx]   ; <== fixme ==
+;	mov ebp, _GlobalIp
+;	ret
 
 L_count:
         mov ebx, _GlobalTp

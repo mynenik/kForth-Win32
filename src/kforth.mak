@@ -2,13 +2,8 @@ ORIGIN		= Digital Mars C++
 ORIGIN_VER	= Version 8.57
 VERSION		= Release
 
-!IFDEF SUB_DEBUG
 DEBUG		= $(SUB_DEBUG)
 NDEBUG		= !$(SUB_DEBUG)
-!ELSE
-DEBUG		= 1
-NDEBUG		= 0
-!ENDIF
 
 PROJ		= kforth
 APPTYPE		= WIN32 CONSOLE
@@ -34,7 +29,6 @@ HEADERS		= fbc.h \
 DEFFILE		= kforth.DEF
 DEF_DIR_VAR     = ""
 
-!IF $(DEBUG)
 OUTPUTDIR	= .
 CREATEOUTPUTDIR	=
 TARGETDIR	= .
@@ -47,20 +41,6 @@ LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB
 CFLAGS		=  -Jm -mn -C -WA -S -3 -a8 -c -w- -w2 -w3 -w6 -g 
 LFLAGS		=  /CO /NOI /DE /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES 
 DEFINES		= -D_WIN32_ -D_CONSOLE -D_CONSOLE=1 -DDIR_ENV_VAR=\"KFORTH_DIR\"
-!ELSE
-OUTPUTDIR	= .
-CREATEOUTPUTDIR	=
-TARGETDIR	= .
-CREATETARGETDIR	=
-
-SYMROOT		= 
-SYMS		= 
-LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
-
-CFLAGS		=  -Jm -mn -WA -3 -a8 -c -w- 
-LFLAGS		=  /NOI /DE /E /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES
-DEFINES		= -D_CONSOLE -D_CONSOLE=1
-!ENDIF
 
 HFLAGS		= $(CFLAGS) 
 MFLAGS		= MASTERPROJ=$(PROJ) 
@@ -73,61 +53,41 @@ HELPFLAGS	=
 MODEL		= N
 
 PAR		= PROJS BATS OBJS
-
 RCDEFINES	= 
-
 INCLUDES	= -ID:\dm\stlport\stlport
-
 INCLUDEDOBJS	= VM32.OBJ
-
 OBJS		= ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ kforth.OBJ
-
 RCFILES		= kforth.rc
-
 RESFILES	= kforth.RES
-
 HELPFILES	= 
-
 BATS		= 
 
 .SUFFIXES: .C .CP .CPP .CXX .CC .H .HPP .HXX .COM .EXE .DLL .LIB .RTF .DLG .ASM .RES .RC .OBJ 
 
 .C.OBJ:
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$*.obj $*.c
-
 .CPP.OBJ:
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$*.obj $*.cpp
-
 .CXX.OBJ:
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$*.obj $*.cxx
-
 .CC.OBJ:
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$*.obj $*.cc
-
 .CP.OBJ:
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$*.obj $*.cp
-
 .H.SYM:
 	$(CC) $(HFLAGS) $(DEFINES) $(INCLUDES) -HF -o$(*B).sym $*.h
-
 .HPP.SYM:
 	$(CC) $(HFLAGS) $(DEFINES) $(INCLUDES) -HF -o$(*B).sym $*.hpp
-
 .HXX.SYM:
 	$(CC) $(HFLAGS) $(DEFINES) $(INCLUDES) -HF -o$(*B).sym $*.hxx
-
 .C.EXP:
 	$(CPP) $(CFLAGS) $(DEFINES) $(INCLUDES)   $*.c   -o$*.lst
-
 .CPP.EXP:
 	$(CPP) $(CFLAGS) $(DEFINES) $(INCLUDES) $*.cpp -o$*.lst
-
 .CXX.EXP:
 	$(CPP) $(CFLAGS) $(DEFINES) $(INCLUDES) $*.cxx -o$*.lst
-
 .CP.EXP:
 	$(CPP) $(CFLAGS) $(DEFINES) $(INCLUDES)  $*.cp  -o$*.lst
-
 .CC.EXP:
 	$(CPP) $(CFLAGS) $(DEFINES) $(INCLUDES)  $*.cc  -o$*.lst
 
@@ -137,9 +97,8 @@ BATS		=
 .OBJ.COD:
 	$(DISASM) $*.OBJ -c
 
-!IF $(DEBUG)
 .OBJ.EXE:
-		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
+	$(LNK) $(LFLAGS) @<<$(PROJ).LNK
 kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
@@ -150,20 +109,6 @@ NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
-!ELSE
-.OBJ.EXE:
-		$(LNK) $(LFLAGS) @$(PROJ).LNK<<
-kforth.OBJ+
-ForthCompiler.OBJ+
-ForthVM.OBJ+
-vmc.OBJ+
-vm32.OBJ
-$$SCW$$.EXE
-NUL
-advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
-kforth.DEF;
-<<
-!ENDIF
 
 .RTF.HLP:
 	$(HC) $(HELPFLAGS) $*.HPJ
@@ -188,9 +133,9 @@ createdir:
 	$(CREATETARGETDIR)
 	
 $(TARGETDIR)\$(PROJ).$(PROJTYPE): $(OBJS) $(INCLUDEDOBJS) $(RCFILES) $(RESFILES) $(HELPFILES) $(DEFFILE)
-			-del $(TARGETDIR)\$(PROJ).$(PROJTYPE)
-!IF $(DEBUG)
-		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
+			-del $(TARGETDIR)\$(PROJ).$(PROJTYPE0)
+
+	$(LNK) $(LFLAGS) @<<$(PROJ).LNK
 kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
@@ -201,19 +146,6 @@ NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
-!ELSE
-		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-kforth.OBJ+
-ForthCompiler.OBJ+
-ForthVM.OBJ+
-vmc.OBJ+
-vm32.OBJ
-$$SCW$$.EXE
-NUL
-advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
-kforth.DEF;
-<<
-!ENDIF
 
 		-ren $(TARGETDIR)\$$SCW$$.$(PROJTYPE) $(PROJ).$(PROJTYPE)
 		-echo $(TARGETDIR)\$(PROJ).$(PROJTYPE) built
@@ -238,8 +170,8 @@ res:		cleanres $(RCFILES) all
 
 
 link:
-!IF $(DEBUG)
-		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
+
+	$(LNK) $(LFLAGS) @<<$(PROJ).LNK
 kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
@@ -250,19 +182,6 @@ NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
 kforth.DEF;
 <<
-!ELSE
-		$(LNK) $(LFLAGS) @<<$(PROJ).LNK
-kforth.OBJ+
-ForthCompiler.OBJ+
-ForthVM.OBJ+
-vmc.OBJ+
-vm32.OBJ
-$$SCW$$.EXE
-NUL
-advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
-kforth.DEF;
-<<
-!ENDIF
 
 		-del $(TARGETDIR)\$(PROJ).$(PROJTYPE)
 		-ren $(TARGETDIR)\$$SCW$$.$(PROJTYPE) $(PROJ).$(PROJTYPE)

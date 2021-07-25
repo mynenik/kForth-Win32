@@ -84,16 +84,22 @@
 \      
 
 include ans-words
-include modules.fs
+include modules
+1 cells 4 = [IF]
 include syscalls
 include mc
 include asm-x86
 include fpu-x86
+[THEN]
 include strings
 include fsl/fsl-util
 include fsl/dynmem
 include fsl/polrat
+1 cells 4 = [IF]
 include fsl/extras/numerov_x86
+[ELSE]
+include fsl/extras/numerov
+[THEN]
 include fsl/extras/find
 include fsl/extras/read_xyfile
 include fsl/extras/array-utils0

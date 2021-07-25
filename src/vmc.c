@@ -1,13 +1,13 @@
 /*
 vmc.c
 
-C portion of the kForth virtual machine
+  C portion of the kForth virtual machine
 
-Copyright (c) 1998--2020 Krishna Myneni and David P. Wallace, 
-<krishna.myneni@ccreweb.org>
+  Copyright (c) 1998--2020 Krishna Myneni and David P. Wallace, 
+  <krishna.myneni@ccreweb.org>
 
-This software is provided under the terms of the GNU
-Affero General Public License (AGPL), v 3.0 or later.
+  This software is provided under the terms of the GNU
+  Affero General Public License (AGPL), v 3.0 or later.
 
 */
 #include<sys/types.h>
@@ -228,25 +228,19 @@ int C_open ()
      ^str is a counted string with the pathname, flags
      indicates the method of opening (read, write, etc.)  */
 
-  int flags, mode = 0, fd;
+  int flags, mode = 0;
   char* pname;
 
-  ++GlobalSp; ++GlobalTp;
-  flags = *GlobalSp;
-  ++GlobalSp; ++GlobalTp;
-  if (*GlobalTp == OP_ADDR)
-    {
-      pname = *((char**)GlobalSp);
-      ++pname;
+  DROP
+  flags = TOS;
+  DROP
+  CHK_ADDR
+  pname = *((char**)GlobalSp);
+  ++pname;
 //      if (flags & O_CREAT) mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-      if (flags & O_CREAT) mode = _S_IREAD | _S_IWRITE ;
-      fd = open (pname, flags, mode);
-      *GlobalSp-- = fd;
-      *GlobalTp-- = OP_IVAL;
-      return 0;
-    }
-  else
-    return 1;  /* not an address error */
+  if (flags & O_CREAT) mode = _S_IREAD | _S_IWRITE ;
+  PUSH_IVAL( open (pname, flags, mode) )
+  return 0;
 }
       
 int C_lseek ()
@@ -254,11 +248,14 @@ int C_lseek ()
   /* stack: ( fd offset mode -- error | set file position in fd ) */
 
   int fd, offset, mode;
-  ++GlobalSp; ++GlobalTp;
-  mode = *GlobalSp++; ++GlobalTp;
-  offset = *GlobalSp++;
-  fd = *GlobalSp;
-  *GlobalSp-- = lseek (fd, offset, mode);
+  DROP
+  mode = TOS;
+  DROP
+  offset = TOS;
+  INC_DSP
+  fd = TOS;
+  TOS = lseek (fd, offset, mode);
+  DEC_DSP
   return 0;
 }
 
@@ -268,9 +265,10 @@ int C_close ()
   /* stack: ( fd -- err | close the specified file and return error code ) */
 
   int fd;
-  ++GlobalSp;
-  fd = *GlobalSp;
-  *GlobalSp-- = close(fd);
+  INC_DSP
+  fd = TOS;
+  TOS = close(fd);
+  DEC_DSP
   return 0;
 }
 
@@ -280,19 +278,15 @@ int C_read ()
   int fd, count;
   void* buf;
 
-  ++GlobalSp; ++GlobalTp;
-  count = *GlobalSp++; ++GlobalTp;
-  if (*GlobalTp == OP_ADDR)
-    {      
-      buf = *((void**)GlobalSp);
-      ++GlobalSp; ++GlobalTp;
-      fd = *GlobalSp;
-      *GlobalSp-- = read (fd, buf, count);
-      *GlobalTp-- = OP_IVAL;
-      return 0;
-    }
-  else
-    return 1;  /* not an address error */
+  DROP
+  count = TOS;
+  DROP
+  CHK_ADDR
+  buf = *((void**)GlobalSp);
+  DROP
+  fd = TOS;
+  PUSH_IVAL( read (fd, buf, count) )
+  return 0;
 }
 
 int C_write ()
@@ -301,19 +295,15 @@ int C_write ()
   int fd, count;
   void* buf;
 
-  ++GlobalSp; ++GlobalTp;
-  count = *GlobalSp++; ++GlobalTp;
-  if (*GlobalTp == OP_ADDR)
-    {
-      buf = *((void**)GlobalSp);
-      ++GlobalSp; ++GlobalTp;
-      fd = *GlobalSp;
-      *GlobalSp-- = write (fd, buf, count);
-      *GlobalTp-- = OP_IVAL;
-      return 0;
-    }
-  else
-    return 1;  /* not an address error */
+  DROP
+  count = TOS;
+  DROP
+  CHK_ADDR
+  buf = *((void**)GlobalSp);
+  DROP
+  fd = TOS;
+  PUSH_IVAL( write (fd, buf, count) )
+  return 0;
 }
 
 // FSYNC ( fd -- ior )
@@ -339,7 +329,7 @@ int C_ioctl ()
   int handle, request, nbin, nbout, success, nbret;
   char *inbuf, *outbuf;
   
-  ++GlobalSp; ++GlobalTp;
+  DROP
   nbout = *GlobalSp++; GlobalTp++;
   outbuf  = *((char**) GlobalSp);
   GlobalSp++;GlobalTp++;
@@ -453,9 +443,8 @@ int C_key ()
           n = 0;
      }
    }
-   *GlobalSp-- = ch;
-   *GlobalTp-- = OP_IVAL;
- 
+
+   PUSH_IVAL( ch )
    return 0;
 }
 /*----------------------------------------------------------*/
@@ -474,8 +463,9 @@ int C_keyquery ()
       (inBuf.Event.KeyEvent.bKeyDown) &&
       (inBuf.Event.KeyEvent.uChar.AsciiChar));
 
-  *GlobalSp-- = key_available ? -1 : 0;
-  *GlobalTp-- = OP_IVAL;
+  TOS = key_available ? -1 : 0;
+  DEC_DSP
+  STD_IVAL
   return 0;
 }      
 /*----------------------------------------------------------*/
@@ -489,9 +479,10 @@ int C_accept ()
   int n1, n2, nr, nw;
 
   hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-  ++GlobalSp; ++GlobalTp;
-  n1 = *GlobalSp++; ++GlobalTp;
-  if (*GlobalTp != OP_ADDR) return 1;
+  DROP
+  n1 = TOS;
+  DROP
+  CHK_ADDR
   cp = *((char**)GlobalSp);
   cpstart = cp;
 
@@ -518,8 +509,7 @@ int C_accept ()
 	  ++n2; ++cp;
         }
     }
-  *GlobalSp-- = n2;
-  *GlobalTp-- = OP_IVAL;
+  PUSH_IVAL( n2 )
   return 0;
 }
 
@@ -1010,8 +1000,7 @@ int C_system ()
   else
     ec = -1;
     
-  *GlobalSp-- = ec;
-  *GlobalTp-- = OP_IVAL;
+  PUSH_IVAL( ec )
   return 0;
 }
 /*----------------------------------------------------------*/
@@ -1023,14 +1012,13 @@ int C_chdir ()
   char* cp;
   int nc;
 
-  ++GlobalSp; ++GlobalTp;
-  if (*GlobalTp != OP_ADDR) return 1;
-  cp = (char*)(*GlobalSp);
+  DROP
+  CHK_ADDR
+  cp = (char*) TOS;
   nc = *cp;
   strncpy (temp_str, cp+1, nc);
   temp_str[nc] = 0;
-  *GlobalSp-- = chdir(temp_str);
-  *GlobalTp-- = OP_IVAL;
+  PUSH_IVAL( chdir(temp_str) )
   return 0;
 }
 /*-----------------------------------------------------------*/
@@ -1045,13 +1033,12 @@ int C_timeanddate ()
   time (&t);
   t_loc = *(localtime (&t));
 
-  *GlobalSp-- = t_loc.tm_sec; *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = t_loc.tm_min; *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = t_loc.tm_hour; *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = t_loc.tm_mday; *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = 1 + t_loc.tm_mon; *GlobalTp-- = OP_IVAL;
-  *GlobalSp-- = 1900 + t_loc.tm_year; *GlobalTp-- = OP_IVAL;
-
+  PUSH_IVAL( t_loc.tm_sec )
+  PUSH_IVAL( t_loc.tm_min )
+  PUSH_IVAL( t_loc.tm_hour )
+  PUSH_IVAL( t_loc.tm_mday )
+  PUSH_IVAL( 1 + t_loc.tm_mon )
+  PUSH_IVAL( 1900 + t_loc.tm_year )
   return 0;
 }
 /*------------------------------------------------------*/
@@ -1074,8 +1061,9 @@ int C_msfetch ()
   // gettimeofday (&tv, NULL);
   // *GlobalSp-- = (tv.tv_sec - ForthStartTime.tv_sec)*1000 + 
   // (tv.tv_usec - ForthStartTime.tv_usec)/1000;
-  *GlobalSp-- = GetTickCount() - ForthStartTime;
-  *GlobalTp-- = OP_IVAL;
+  TOS = GetTickCount() - ForthStartTime;
+  DEC_DSP
+  STD_IVAL
   return 0;
 }
 /*------------------------------------------------------*/

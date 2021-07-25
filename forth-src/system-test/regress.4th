@@ -18,7 +18,8 @@
 \                    in comment line.
 \        Revised:  January 26, 2020  km; fixed DU< tests for 64-bit.
 \        Revised:  January 29, 2020  km; added tests for UW@ SW@ UL@ SL@ L!
-\        Revised:  February 13, 2020 km; added tests for NUMBER? 
+\        Revised:  February 13, 2020 km; added tests for NUMBER?
+\        Revised:  June 6, 2021 km; added tests for POSTPONE and COMPILE, 
 s" ans-words.4th" included
 s" ttester.4th" included
 
@@ -454,7 +455,6 @@ t{ c" 5G" number?  ->  5 s>d false }t
 t{ c" G5" number?  ->  0 s>d false }t
 decimal
 
-64bit? invert [IF]
 COMMENT Uncomment lines in regress.4th to test errors.
 
 \ Use stolerance for single precision floating point 
@@ -464,16 +464,16 @@ COMMENT Uncomment lines in regress.4th to test errors.
 1e-7  fconstant stolerance  \ tolerance for single precision fp
 1e-15 fconstant tolerance
 
-: -2rot  ( x y z -- z x y )  2rot 2rot ;
+: -frot  ( F: x y z -- z x y )  frot frot ;
 
-t{ 1 2 3 4 5 6 -2rot -> 5 6 1 2 3 4 }t
+t{ 1e 2e 3e -frot -> 3e 1e 2e }t
 
-: fwithin ( x y z -- flag )
+: fwithin ( -- flag ) ( F: x y z -- )
 (
 Assume y < z.  Leave flag = [y<=x<z].
 )
-  -2rot 2over       ( z x y x)
-  f<= ( [y<=x]) >r  ( z x)
+  -frot fover       ( F: z x y x)
+  f<= ( [y<=x]) >r  ( F: z x)
   f> ( [z>x]) r> and
 ;
 
@@ -528,10 +528,16 @@ t{ -3 s>f -> -3e r}t
 t{  3  0         d>f ->  3e r}t
 t{  0  0         d>f ->  0e r}t
 t{ -3 -1         d>f -> -3e r}t
+
+64bit? invert [IF]
 t{  0  1         d>f ->  4294967296e r}t
 t{  0  1 dnegate d>f -> -4294967296e r}t
+[THEN]
 
 hex
+[DEFINED] FDEPTH [IF]  \ has fp stack
+comment Skipping all F>D tests
+[ELSE]
 -1 43dfffff           fconstant  maxftod.f
 maxftod.f fnegate     fconstant -maxftod.f
 0 40900000            fconstant  2^10.f
@@ -579,6 +585,7 @@ t{ -1e  0e f/            f>d -> -maxdint }t  \ -Inf
 t{  0e  0e f/            f>d ->  maxdint }t  \  NaN
 t{  0e  0e f/ fnegate    f>d -> -maxdint }t  \ -NaN
 )
+[THEN]
 
 decimal
 SET-EXACT
@@ -718,4 +725,27 @@ t{ 0e   fsincos -> 0e 1e rr}t
 t{ pi/2 fsincos -> 1e 0e rr}t
 t{ 45e deg>rad fsincos ->  1/sqrt2  1/sqrt2  rr}t
 
-[THEN] \ 64bit? ...
+TESTING Additional POSTPONE tests
+( Adapted from message posted to comp.lang.forth, 
+by Anton Ertl on 2021-05-17 )
+t{ : foo state @ ; immediate -> }t
+t{ : foo1 postpone foo ; -> }t
+t{ foo1 -> 0 }t
+
+t{ : x] ] ; immediate -> }t
+t{ : y] postpone x] ; -> }t
+t{ : bar [ 2 2 + y] literal ; -> }t
+t{ bar -> 4 }t
+
+TESTING COMPILE,
+( Additional tests for COMPILE, by K. Myneni, 2021/06/03 )
+: CTa ['] 2+ compile, ; immediate
+: add2a CTa ;
+t{ 3 add2a -> 5 }t
+: CTb [ ' 2+ ] literal compile, ; immediate
+: add2b CTb ;
+t{ 4 add2b -> 6 }t
+: CTc [ ' 2+ compile, ] ;  ( non-standard )
+: add2c CTc ;
+t{ 5 add2c -> 7 }t
+
