@@ -2,7 +2,7 @@
 ;
 ; The assembler portion of kForth 32-bit Virtual Machine
 ;
-; Copyright (c) 1998--2020 Krishna Myneni
+; Copyright (c) 1998--2021 Krishna Myneni
 ;
 ; This software is provided under the terms of the GNU
 ;   Affero General Public License (AGPL) v 3.0 or later.
@@ -61,7 +61,6 @@ _Precision dd 0
 _pTIB dd 0
 _TIB db 256 dup 0
 _WordBuf db 256 dup 0
-_ParseBuf db 1024 dup 0
 _NumberCount dd 0
 _NumberBuf db 256 dup 0
 
