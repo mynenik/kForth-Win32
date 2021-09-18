@@ -141,7 +141,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_twoliteral, _C_tonumber, _C_numberquery, _CPP_sliteral ; 296 -- 299
           dd _CPP_fliteral, _CPP_twovariable, _CPP_twoconstant, L_nop ; 300 -- 303
           dd _CPP_tofile, _CPP_console, _CPP_loop, _CPP_plusloop  ; 304 -- 307
-          dd _CPP_unloop, L_nop, L_nop, L_blank  ; 308 -- 311
+          dd _CPP_unloop, _CPP_noname, L_nop, L_blank  ; 308 -- 311
           dd L_slashstring, _C_trailing, _C_parse, L_nop ; 312 -- 315
           dd L_nop, L_nop, L_nop, L_nop  ; 316 -- 319
           dd _C_dlopen, _C_dlerror, _C_dlsym, _C_dlclose  ; 320 -- 323
@@ -169,7 +169,15 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_lstore, L_nop, L_nop, L_nop ; 408 -- 411
           dd L_nop, L_nop, L_nop, L_nop  ; 412 -- 415
           dd L_nop, L_nop, L_nop, L_nop  ; 416 -- 419
-          dd _C_valloc, _C_vfree, _C_vprotect, L_nop ; 420 -- 423
+          dd L_nop, L_nop, L_nop, L_nop  ; 420 -- 423
+          dd L_nop, L_nop, L_nop, L_nop  ; 424 -- 427
+          dd L_nop, L_nop, L_nop, L_nop  ; 428 -- 431
+          dd L_nop, L_nop, L_nop, L_nop  ; 432 -- 435
+          dd L_nop, L_nop, L_nop, L_nop  ; 436 -- 439
+          dd L_nop, L_nop, L_nop, L_nop  ; 440 -- 443
+          dd L_nop, L_nop, L_nop, L_nop  ; 444 -- 447
+          dd L_nop, L_nop, _C_valloc, _C_vfree  ; 448 -- 451
+          dd _C_vprotect, L_nop, L_nop, L_nop   ; 452 -- 455
 _DATA ENDS
 
 public _L_initfpu, _L_depth, _L_quit, _L_abort, _L_ret

@@ -2,7 +2,7 @@
 \
 \ Simple electronic note-keeping system
 \
-\ Copyright (c) 2001--2020 Krishna Myneni
+\ Copyright (c) 2001--2021 Krishna Myneni
 \ Provided under the GNU General Public License
 \ 
 \ Requires:
@@ -13,28 +13,6 @@
 \   user.4th
 \   struct.4th
 \   struct-ext.4th
-\
-\ Revisions:
-\	9-18-2001 created KM
-\	9-20-2001 simplified user commands KM
-\	9-21-2001 added modify-note KM
-\	4-06-2002 used $constant for string constants and
-\	            made mods to allow operation under other Forths;
-\		    tested under PFE and gforth  KM
-\	9-19-2002 removed $constant and pack -- these are now in
-\		    utils.4th. Also use get-username from user.4th.  KM
-\       2-27-2007 automatic user name used in DEF-NOTES-FILE; use
-\                   struct for note record header  km
-\       3-22-2007 revised search-notes to search for text in the 
-\                   three fields: keywords, title, and note body  km
-\       7-28-2010 updated the field retrieval words to use explicit
-\                   little-endian 32-bit fetches and stores, so that the 
-\                   code will also run on 64-bit systems, and the
-\                   database files will be portable across both 
-\                   big-endian and little-endian systems ; updated notes  km
-\       7-31-2010 factored SET-NOTE-POSITION by introducing the words
-\                   NEAREST-NOTE-INDEX and NEAREST-OFFSET; also defined U>D  km
-\       8-01-2010 added REBUILD-INDEX, COMMITT-INDEX, and D>U; further factoring  km
 \	
 \ Notes:
 \
@@ -66,8 +44,6 @@
 
 decimal
 
-true value kForth     \ set to true for kForth
-
 1 CELLS 4 < [IF]
   cr .( ** SYSTEM MUST HAVE MINIMUM CELL SIZE OF 32-BITS ** ) cr
   ABORT
@@ -94,10 +70,13 @@ true value kForth     \ set to true for kForth
 : >upper ( a u -- a u )
         2DUP 0 ?DO DUP C@ DUP is_lc_alpha IF 95 AND THEN OVER C! 1+ LOOP DROP ;
 
-	
-\ s" /home/" get-username strcat s" /notes.db" strcat $constant  DEF-NOTES-FILE
-s" C:\Users\" get-username strcat s" \Documents\notes.db" strcat $constant DEF-NOTES-FILE
- 
+[undefined] _WIN32_ [IF]
+s" /home/"     s" /notes.db"
+[ELSE]
+s" C:\Users\"  s" \Documents\notes.db"
+[THEN]
+2swap get-username strcat 2swap strcat  $constant  DEF-NOTES-FILE
+
 s" ERROR: unable to create new notes file "  $constant  E-NEW-CREATE-MSG
 s" ERROR: unable to open notes file "	     $constant  E-OPEN-MSG
 s" ERROR: notes file already exists."        $constant  E-FILE-EXISTS-MSG

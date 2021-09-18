@@ -10,6 +10,11 @@ vmc.c
   Affero General Public License (AGPL), v 3.0 or later.
 
 */
+
+#ifndef _WIN32_
+#define _GNU_SOURCE
+#endif
+
 #include<sys/types.h>
 #include<sys/time.h>
 #include<sys/timeb.h>
@@ -37,14 +42,16 @@ vmc.c
 
 /*  Provided by ForthVM.cpp  */
 extern int* GlobalSp;
-extern byte* GlobalTp;
 extern byte* GlobalIp;
 extern int* GlobalRp;
-extern byte* GlobalRtp;
 extern int* BottomOfStack;
 extern int* BottomOfReturnStack;
+#ifndef __FAST__
+extern byte* GlobalTp;
+extern byte* GlobalRtp;
 extern byte* BottomOfTypeStack;
 extern byte* BottomOfReturnTypeStack;
+#endif
 extern int CPP_bye();
 
 /* Provided by vm32.asm */
@@ -67,7 +74,12 @@ extern int L_abort();
 extern int vm(byte*);
 
 // struct timeval ForthStartTime;
+#ifdef _WIN32_
 unsigned long int ForthStartTime;
+#else
+struct timeval ForthStartTime;
+struct termios tios0;
+#endif
 double* pf;
 double f;
 char temp_str[256];
@@ -89,8 +101,9 @@ int C_fexpm1() { DOUBLE_FUNC(expm1) return 0; }
 int C_fln   () { DOUBLE_FUNC(log)   return 0; }
 int C_flnp1 () { DOUBLE_FUNC(log1p) return 0; }
 int C_flog  () { DOUBLE_FUNC(log10) return 0; }
-// int C_falog () { DOUBLE_FUNC(exp10) return 0; }
-
+#ifndef _WIN32_
+int C_falog () { DOUBLE_FUNC(exp10) return 0; }
+#else
 int C_falog ()
 {
      pf = (double*)(GlobalSp + 1);
@@ -98,7 +111,8 @@ int C_falog ()
      *pf = pow(10., f);
      return 0;
 }
-     
+#endif
+
 // powA  is copied from the source of the function pow() in paranoia.c,
 //   at  http://www.math.utah.edu/~beebe/software/ieee/
 double powA(double x, double y) /* return x ^ y (exponentiation) */
@@ -146,7 +160,7 @@ int C_fmin ()
 	++pf;
 	if (f < *pf) *pf = f;
 	GlobalSp += 2;
-	GlobalTp += 2;
+	INC2_DTSP
 	return 0;
 }
 
@@ -157,10 +171,11 @@ int C_fmax ()
 	++pf;
 	if (f > *pf) *pf = f;
 	GlobalSp += 2;
-	GlobalTp += 2;
+	INC2_DTSP
 	return 0;
 }
 
+#ifdef _WIN32_
 // Allocate virtual read-write memory; return start address
 // if successful, or -1 on error.
 int C_valloc ()
@@ -220,6 +235,7 @@ int C_vprotect ()
    STD_IVAL
    return 0;
 } 
+#endif
 
 int C_open ()
 {
@@ -236,8 +252,11 @@ int C_open ()
   CHK_ADDR
   pname = *((char**)GlobalSp);
   ++pname;
-//      if (flags & O_CREAT) mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+#ifndef _WIN32_
+  if (flags & O_CREAT) mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+#else
   if (flags & O_CREAT) mode = _S_IREAD | _S_IWRITE ;
+#endif
   PUSH_IVAL( open (pname, flags, mode) )
   return 0;
 }
@@ -646,9 +665,11 @@ int C_word ()
   return 0;
 }
 
+// PARSE  ( char "ccc<char>" -- c-addr u )
+// Parse text delimited by char; return string address and count.
+// Forth-94 Core Extensions wordset 6.2.2008
 int C_parse ()
 {
-  /* stack: ( n -- a u | parse string delimited by char n ) */
   DROP
   char delim = TOS;
   char *cp = pTIB;
@@ -664,7 +685,7 @@ int C_parse ()
         }
       if (*pTIB) ++pTIB;  /* consume the delimiter */
     }
-  PUSH_ADDR((int) cp)
+  PUSH_ADDR((long int) cp)
   PUSH_IVAL(count)
   return 0;
 }
@@ -711,8 +732,10 @@ int C_sharp()
 
   *GlobalSp = *(GlobalSp+2); --GlobalSp;
   *GlobalSp = *(GlobalSp+2); --GlobalSp;  /* 2dup */
+#ifndef __FAST__
   *GlobalTp = *(GlobalTp+2); --GlobalTp;
   *GlobalTp = *(GlobalTp+2); --GlobalTp;  /*  "  */
+#endif
   TOS = 0; /* pad to triple length */
   DEC_DSP
   DEC_DTSP
@@ -1047,20 +1070,25 @@ void set_start_time ()
   /* this is not a word in the Forth dictionary; it is
      used by the initialization routine on startup     */
 
-  // gettimeofday (&ForthStartTime, NULL);
+#ifdef _WIN32_
   ForthStartTime = GetTickCount();
-
+#else
+  gettimeofday (&ForthStartTime, NULL);
+#endif
 }
 
 int C_msfetch ()
 {
   /* stack: ( -- msec | return msec elapsed since start of Forth ) */
   
-  // struct timeval tv;
-  // gettimeofday (&tv, NULL);
-  // *GlobalSp-- = (tv.tv_sec - ForthStartTime.tv_sec)*1000 + 
-  // (tv.tv_usec - ForthStartTime.tv_usec)/1000;
+#ifdef _WIN32_
   TOS = GetTickCount() - ForthStartTime;
+#else
+  struct timeval tv;
+  gettimeofday (&tv, NULL);
+  TOS = (tv.tv_sec - ForthStartTime.tv_sec)*1000 +
+    (tv.tv_usec - ForthStartTime.tv_usec)/1000;
+#endif
   DEC_DSP
   STD_IVAL
   return 0;

@@ -27,8 +27,8 @@
 //
 //      kforth [name[.4th]] [-D] [-e string]
 //
-char* version = "1.7.0";
-char* Rls_Date = "2021-07-24";
+const char* version = "1.7.1";
+const char* Rls_Date = "2021-09-18";
 
 #include <iostream>
 #include <fstream>
@@ -36,6 +36,7 @@ char* Rls_Date = "2021-07-24";
 #include <string>
 #include <vector>
 using namespace std;
+
 #include "fbc.h"
 #include "ForthCompiler.h"
 #include "ForthVM.h"
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2) {
 	cout << "kForth-Win32 v " << version << "\t (Rls. " << Rls_Date << ")" << endl;
-	cout << "Copyright (c) 1998--2020 Krishna Myneni" << endl;
+	cout << "Copyright (c) 1998--2021 Krishna Myneni" << endl;
         cout << "Contributions by: dpw gd mu bk abs tn cmb bg dnw" << endl;
 	cout << "Provided under the GNU Affero General Public License, v3.0 or later."
 		<< endl << endl;
@@ -124,6 +125,7 @@ int main(int argc, char *argv[])
 	    cin.getline( input_line, 1024 );
 	    if (cin.fail()) CPP_bye();
 	    strncpy(s, input_line, 255);
+
             pSS = new istringstream(s);
 	    SetForthInputStream (*pSS);	    
             ec = ForthCompiler (&op, &line_num);
