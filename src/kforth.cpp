@@ -27,8 +27,12 @@
 //
 //      kforth [name[.4th]] [-D] [-e string]
 //
-const char* version = "1.7.1";
-const char* Rls_Date = "2021-09-18";
+#ifdef VERSION
+const char* version=VERSION;
+#else
+const char* version="?";
+#endif
+const char* build="2021-10-03";
 
 #include <iostream>
 #include <fstream>
@@ -64,7 +68,7 @@ int main(int argc, char *argv[])
     int nWords = OpenForth();
 
     if (argc < 2) {
-	cout << "kForth-Win32 v " << version << "\t (Rls. " << Rls_Date << ")" << endl;
+	cout << "kForth-Win32 v " << version << "\t (Build: " << build << ")" << endl;
 	cout << "Copyright (c) 1998--2021 Krishna Myneni" << endl;
         cout << "Contributions by: dpw gd mu bk abs tn cmb bg dnw" << endl;
 	cout << "Provided under the GNU Affero General Public License, v3.0 or later."
