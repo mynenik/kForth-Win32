@@ -2,7 +2,7 @@
 ;
 ; The assembler portion of kForth 32-bit Virtual Machine
 ;
-; Copyright (c) 1998--2021 Krishna Myneni
+; Copyright (c) 1998--2022 Krishna Myneni
 ;
 ; This software is provided under the terms of the GNU
 ;   Affero General Public License (AGPL) v 3.0 or later.
@@ -34,13 +34,15 @@ OP_IVAL equ 73
 OP_RET  equ 238
 SIGN_MASK  equ  080000000H
 
-; Error Codes
+; Error Codes must be same as those in VMerrors.h
 
-E_NOT_ADDR      equ     1
-E_DIV_ZERO      equ     4
-E_RET_STK_CORRUPT equ   5
-E_UNKNOWN_OP    equ     6
-E_DIV_OVERFLOW  equ    20
+E_DIV_ZERO      equ     -10
+E_ARG_TYPE_MISMATCH equ -12
+E_QUIT          equ     -56
+E_NOT_ADDR      equ     -256
+E_RET_STK_CORRUPT equ   -258
+E_BAD_OPCODE    equ     -259
+E_DIV_OVERFLOW  equ     -270
 
 _DATA SEGMENT PUBLIC FLAT
 NDPcw      dd 0
@@ -152,8 +154,8 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_only, _CPP_also, _CPP_order, _CPP_previous ; 340 -- 343
           dd _CPP_forth, _CPP_assembler, L_nop, L_nop ; 344 -- 347
           dd L_nop, L_nop, _CPP_defined, _CPP_undefined ; 348 -- 351
-          dd L_nop, L_nop, L_nop, L_nop  ; 352 -- 355
-          dd L_nop, L_nop, L_nop, L_nop  ; 356 -- 359
+          dd L_nop, L_nop, L_nop, L_nop      ; 352 -- 355
+          dd L_nop, L_nop, L_nop, L_vmthrow  ; 356 -- 359
           dd L_precision, L_setprecision, L_nop, _CPP_fsdot ; 360 -- 363
           dd L_nop, L_nop, _C_fexpm1, _C_flnp1  ; 364 -- 367
           dd _CPP_uddotr, _CPP_ddotr, L_f2drop, L_f2dup  ; 368 -- 371
@@ -652,6 +654,14 @@ E_div_overflow:
         mov eax, E_DIV_OVERFLOW
         ret
 
+L_vmthrow:  ; throw VM error (used as default exception handler)
+        LDSP
+        INC_DSP
+        INC_DTSP
+        mov eax, [ebx]
+        STSP
+        ret
+
 L_cputest:
         ret
 
@@ -707,7 +717,7 @@ vmexit:
         pop ebp
         ret
 L_nop:
-        mov eax, E_UNKNOWN_OP   ; unknown operation
+        mov eax, E_BAD_OPCODE   ; unknown operation
         ret
 _L_quit:
         mov eax, _BottomOfReturnStack   ; clear the return stacks
