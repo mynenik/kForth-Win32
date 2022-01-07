@@ -725,7 +725,7 @@ _L_quit:
 	mov _vmEntryRp, eax
         mov eax, _BottomOfReturnTypeStack
         mov _GlobalRtp, eax
-        mov eax, 8              ; exit the virtual machine
+        mov eax, E_QUIT              ; exit the virtual machine
         ret
 _L_abort:
         mov eax, _BottomOfStack
@@ -1081,9 +1081,7 @@ L_slashstring:
 L_call:
         LDSP
         _DROP
-        call [ebx]   ; <== fixme == may need another level of indirection
-        xor eax, eax
-        ret
+        jmp [ebx]
 
 L_push_r:
         PUSH_R
@@ -1413,9 +1411,6 @@ L_calladdr:
 	add ebp, 3
 	mov _GlobalIp, ebp
         jmp [ecx]
-;	call [ecx]   ; <== fixme ==
-;	mov ebp, _GlobalIp
-;	ret
 
 L_count:
         mov ebx, _GlobalTp
