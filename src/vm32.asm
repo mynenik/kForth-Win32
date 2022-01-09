@@ -702,7 +702,7 @@ next:
 	mov ebp, _GlobalIp      ; resync ip (possibly changed in call)
 	inc ebp			; increment the Forth instruction ptr
 	mov _GlobalIp, ebp
-        cmp al, 0               ; check for error
+        cmp eax, 0              ; check for error
         jz next                 ;
 exitloop:
         cmp eax, OP_RET         ; return from vm?
