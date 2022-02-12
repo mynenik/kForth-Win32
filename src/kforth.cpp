@@ -32,7 +32,7 @@ const char* version=VERSION;
 #else
 const char* version="?";
 #endif
-const char* build="2022-01-07";
+const char* build="2022-02-12";
 
 #include <iostream>
 #include <fstream>

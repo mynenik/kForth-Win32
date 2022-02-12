@@ -2482,21 +2482,11 @@ L_plusstore:
         cmp al, OP_ADDR
         jnz E_not_addr
         LDSP
-        push ebx
-        push ebx
-        push ebx
-        mov ebx, [ebx + WSIZE]
+        INC_DSP
+        mov edx, [ebx]  ; edx = addr
+        INC_DSP
         mov eax, [ebx]
-        pop ebx
-        mov ebx, [ebx + 2*WSIZE]
-        add eax, ebx
-        pop ebx
-        mov ebx, [ebx + WSIZE]
-        mov [ebx], eax
-        pop ebx
-        mov eax, WSIZE
-        sal eax, 1
-        add ebx, eax
+        add [edx], eax
         STSP
         INC2_DTSP
         xor eax, eax

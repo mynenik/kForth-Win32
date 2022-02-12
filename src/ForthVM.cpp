@@ -2676,11 +2676,6 @@ int CPP_spstore()
 {
     // stack: ( addr -- | make the stack ptr point to a new address)
 
-// cout << "GlobalSp = " << GlobalSp << "  ForthStack = " << ForthStack << endl;
-// #ifndef __FAST__
-// cout << "GlobalTp = " << (void *) GlobalTp << "  ForthTypeStack = " << (void *) ForthTypeStack << endl;
-// #endif
-
     DROP
     CHK_ADDR
     long int* p = (long int*) TOS; --p;
