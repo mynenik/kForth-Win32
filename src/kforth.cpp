@@ -32,7 +32,7 @@ const char* version=VERSION;
 #else
 const char* version="?";
 #endif
-const char* build="2022-02-12";
+const char* build="2022-05-15";
 
 #include <iostream>
 #include <fstream>
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 {
     ostringstream initial_commands (ostringstream::out);
     istringstream* pSS = NULL;
-    char* prompt = " ok\n";
+    const char* prompt = " ok\n";
     int nWords = OpenForth();
 
     if (argc < 2) {

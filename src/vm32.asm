@@ -170,7 +170,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_nop, L_uwfetch, L_ulfetch, L_slfetch ; 404 -- 407
           dd L_lstore, L_nop, L_nop, L_nop ; 408 -- 411
           dd L_nop, L_nop, L_nop, L_nop  ; 412 -- 415
-          dd L_nop, L_nop, L_nop, L_nop  ; 416 -- 419
+          dd L_nop, L_udivmod, _L_uddivmod, L_nop  ; 416 -- 419
           dd L_nop, L_nop, L_nop, L_nop  ; 420 -- 423
           dd L_nop, L_nop, L_nop, L_nop  ; 424 -- 427
           dd L_nop, L_nop, L_nop, L_nop  ; 428 -- 431
@@ -184,7 +184,7 @@ _DATA ENDS
 
 public _L_initfpu, _L_depth, _L_quit, _L_abort, _L_ret
 public _L_dabs, _L_dplus, _L_dminus, _L_dnegate
-public _L_mstarslash, _L_udmstar, _L_utmslash
+public _L_mstarslash, _L_udmstar, _L_uddivmod, _L_utmslash
 
 public _vm
 
@@ -198,7 +198,7 @@ INC2_DSP MACRO  add ebx, 2*WSIZE    #EM
 INC_DTSP MACRO  inc _GlobalTp       #EM
 DEC_DTSP MACRO  dec _GlobalTp       #EM
 INC2_DTSP MACRO add _GlobalTp, 2    #EM
-_NOT     MACRO  not [ebx + WSIZE]   #EM
+_NOT     MACRO  not D[ebx + WSIZE]  #EM
 
 
 STD_IVAL MACRO
@@ -400,12 +400,12 @@ FOVER MACRO
         xor eax, eax
 #EM
 
-
 ; use algorithm from DNW's vm-osxppc.s
+; Regs: eax, ebx, ecx, edx
+; In: ebx = DSP
+; Out: eax = 0, ebx = DSP
 _ABS MACRO
-	LDSP
-	INC_DSP
-	mov ecx, [ebx]
+	mov ecx, [ebx + WSIZE]
 	xor eax, eax
 	cmp ecx, eax
 	setl al
@@ -413,7 +413,7 @@ _ABS MACRO
 	mov edx, eax
 	xor edx, ecx
 	sub edx, eax
-	mov [ebx], edx
+	mov [ebx + WSIZE], edx
 	xor eax, eax
 #EM
 
@@ -552,24 +552,6 @@ STOD MACRO
 	xor eax, eax
 #EM
 
-DNEGATE MACRO
-	LDSP
-	INC_DSP
-	mov ecx, ebx
-	INC_DSP
-	mov eax, [ebx]
-	not eax
-	clc
-	add eax, 1
-	mov [ebx], eax
-	mov ebx, ecx
-	mov eax, [ebx]
-	not eax
-	adc eax, 0
-	mov [ebx], eax
-	xor eax, eax
-#EM
-
 DPLUS MACRO
 	LDSP
 	INC2_DSP
@@ -600,20 +582,75 @@ DMINUS MACRO
 	xor eax, eax
 #EM
 
+; signed single division
+; Regs: eax, ebx, ecx, edx
+; In: ebx = TOS
+; Out: eax = quot, edx = rem, ebx = TOS
+_DIV MACRO
+        mov ecx, [ebx]
+        cmp ecx, 0
+        jz E_div_zero
+        INC_DSP
+        mov eax, [ebx]
+        cdq
+        idiv ecx
+#EM
+
+; unsigned single division
+; Regs: eax, ebx, ecx, edx
+; In: ebx = TOS
+; Out: eax = quot, edx = rem, ebx = TOS
+UDIV   MACRO
+        mov ecx, [ebx]
+        cmp ecx, 0
+        jz E_div_zero
+        INC_DSP
+        mov eax, [ebx]
+        mov edx, 0
+        div ecx
+#EM
+
+; Regs: eax, ebx, ecx
+; In: ebx = DSP
+; Out: eax = 0, ebx = DSP
+DNEGATE MACRO
+	INC_DSP
+	mov ecx, ebx
+	INC_DSP
+	mov eax, [ebx]
+	not eax
+	clc
+	add eax, 1
+	mov [ebx], eax
+	mov ebx, ecx
+	mov eax, [ebx]
+	not eax
+	adc eax, 0
+	mov [ebx], eax
+	DEC_DSP
+	xor eax, eax
+#EM
+
+; Regs: eax, ebx
+; In: ebx = DSP
+; Out: eax = 0, ebx = DSP
 STARSLASH MACRO
-        mov eax, 2*WSIZE
-        add _GlobalSp, eax
-        LDSP
+        cmp D[ebx + WSIZE], 0
+        jz E_div_zero
+        INC2_DSP
         mov eax, [ebx + WSIZE]
-        imul [ebx]
-        idiv [ebx - WSIZE]
+        imul D[ebx]
+        idiv D[ebx - WSIZE]
         mov [ebx + WSIZE], eax
         INC2_DTSP
         xor eax, eax
 #EM
 
+; Regs: eax, ebx, ecx, edx
+; In: ebx = DSP
+; Out: eax = 0, ebx = DSP
 TNEG MACRO
-        LDSP
+        push ebx
         mov eax, WSIZE
         add ebx, eax
         mov edx, [ebx]
@@ -634,6 +671,7 @@ TNEG MACRO
         mov [ebx], ecx
         sub ebx, eax
         mov [ebx], edx
+        pop ebx
         xor eax, eax
 #EM
 
@@ -694,9 +732,7 @@ _vm     proc    near
 	xor eax, eax
 next:
         mov al, [ebp]		  ; get the opcode
-        shl eax, 2              ; determine offset of opcode
-        mov ebx, offset _JumpTable
-        add ebx, eax            ; address of machine code
+	lea ebx, _JumpTable[eax*WSIZE]  ; address of machine code
         xor eax, eax            ; clear error code
         call [ebx]              ; call the word
 	mov ebp, _GlobalIp      ; resync ip (possibly changed in call)
@@ -866,7 +902,7 @@ L_tobody:
 ; Use USLEEP when task can be put to sleep and reawakened by OS
 ;
 L_usleep:
-	  mov eax, WSIZE
+	mov eax, WSIZE
         add _GlobalSp, eax
         INC_DTSP
         LDSP
@@ -1529,12 +1565,9 @@ L_or:
         ret
 
 L_not:
-        mov ebx, _GlobalSp
-        mov eax, [ebx + WSIZE]
-        not eax
-        mov [ebx + WSIZE], eax
-        xor eax, eax
-        ret
+	LDSP
+	_NOT
+	NEXT
 
 L_xor:
         add _GlobalSp, WSIZE
@@ -2257,6 +2290,7 @@ L_twominus:
         NEXT
 
 L_abs:
+	LDSP
 	_ABS
 	NEXT
 
@@ -2419,56 +2453,60 @@ L_mul:
         NEXT
 
 L_div:
-        add _GlobalSp, WSIZE
-        INC_DTSP
         LDSP
-        mov eax, [ebx]
-        cmp eax, 0
-        jz E_div_zero
-        INC_DSP
-        mov eax, [ebx]
-        cdq
-        idiv D[ebx - WSIZE]
+	INC_DSP
+	_DIV
         mov [ebx], eax
+	DEC_DSP
+	STSP
+	INC_DTSP
         xor eax, eax
-divexit:
-        ret
+        NEXT
 
 L_mod:
-        call L_div
-	cmp eax, 0
-	jnz divexit
-        mov [ebx], edx
+        LDSP
+	INC_DSP
+	_DIV
+	mov [ebx], edx
+	DEC_DSP
+	STSP
+	INC_DTSP
+	xor eax, eax
         NEXT
 
 L_slashmod:
-        call L_div
-        cmp eax, 0
-	jnz divexit
-	DEC_DSP
+	LDSP
+	INC_DSP
+	_DIV
         mov [ebx], edx
         DEC_DSP
+	mov [ebx], eax
+	DEC_DSP
         STSP
-        DEC_DTSP
-        _SWAP
+        xor eax, eax
         NEXT
 
+L_udivmod:
+	LDSP
+	INC_DSP
+	UDIV
+	mov [ebx], edx
+	DEC_DSP
+	mov [ebx], eax
+	DEC_DSP
+	STSP
+	xor eax, eax
+	NEXT
+
 L_starslash:
-        mov eax, WSIZE
-        sal eax, 1
-        add _GlobalSp, eax
-        mov ebx, _GlobalSp
-        mov eax, [ebx + WSIZE]
-        imul D[ebx]
-        idiv D[ebx - WSIZE]
-        mov [ebx + WSIZE], eax
-        inc _GlobalTp
-        inc _GlobalTp
-        xor eax, eax
-        ret
+	LDSP
+	STARSLASH
+	STSP
+        NEXT
 
 L_starslashmod:
-        call L_starslash
+	LDSP
+        STARSLASH
         mov [ebx], edx
         DEC_DSP
         STSP
@@ -2520,6 +2558,7 @@ dabs_go:
 
 _L_dnegate:
 	push ebx  ; Win32 stdcall calling convention
+	LDSP
 	DNEGATE
 	pop ebx
 	ret
@@ -2565,8 +2604,8 @@ L_dsstar:
         xor al, ah     ; sign of result
         and eax, 1
         push eax
+	LDSP
         _ABS
-        LDSP
         INC_DSP
         STSP
         INC_DTSP
@@ -2612,6 +2651,34 @@ L_umslashmod:
         xor eax, eax
         NEXT
 
+_L_uddivmod:
+; Divide unsigned double length by unsigned single length to
+; give unsigned double quotient and single remainder.
+        LDSP
+        mov eax, WSIZE
+        add ebx, eax
+        mov ecx, [ebx]
+        cmp ecx, 0
+        jz E_div_zero
+        add ebx, eax
+        mov edx, 0
+        mov eax, [ebx]
+        div ecx
+        push edi
+        mov  edi, eax  ; edi = hi quot
+        INC_DSP
+        mov eax, [ebx]
+        div ecx
+        mov [ebx], edx
+        DEC_DSP
+        mov [ebx], eax
+        DEC_DSP
+        mov [ebx], edi
+        pop edi
+        DEC_DSP
+        xor eax, eax
+        ret
+
 L_mstar:
 	LDSP
         mov eax, WSIZE
@@ -2651,7 +2718,8 @@ L_mslash:
 	NEXT
 
 _L_udmstar:
-	; multiply unsigned double and unsigned to give triple length product
+; Multiply unsigned double and unsigned single to give
+; the triple length product
 	push ebx  ; Win32 stdcall convention requires preserving ebx
 	LDSP
 	INC_DSP
@@ -2745,6 +2813,8 @@ L_stsslashrem:
 ; rule for symmetric division.
         LDSP
         INC_DSP
+	INC_DTSP
+	STSP
         mov ecx, [ebx]                 ; divisor in ecx
         cmp ecx, 0
         jz E_div_zero
@@ -2761,11 +2831,14 @@ L_stsslashrem:
         neg eax
         xor edx, eax                  ; sign of quotient
         push edx
-        STSP
         call L_tabs
-        sub _GlobalSp, WSIZE
+	LDSP
+        DEC_DSP
+	DEC_DTSP
+	STSP
         _ABS
         call L_utsslashmod
+	LDSP
         pop edx
         cmp edx, 0
         jz stsslashrem1
@@ -2782,12 +2855,13 @@ stsslashrem2:
         ret
 
 _L_utmslash:
-	; Divide unsigned triple length by unsigned to give ud quotient.
-	; A "Divide Overflow" error results if the quotient doesn't fit
-	; into a double word
+; Divide unsigned triple length by unsigned single to give 
+; unsigned double quotient. A "Divide Overflow" error results
+; if the quotient doesn't fit into a double word.
 	push ebx  ; Win32 stdcall calling convention 
 	LDSP
-	mov ecx, [ebx + WSIZE]	; divisor in ecx
+	INC_DSP
+	mov ecx, [ebx]	; divisor in ecx
 	pop ebx
 	cmp ecx, 0
 	jz E_div_zero
@@ -2803,9 +2877,12 @@ _L_utmslash:
 utmslash1:
         push ebx
 	LDSP
+	INC2_DSP
+	push ebx
+	LDSP
 	mov [ebx-4*WSIZE], eax	; q3
 	mov [ebx-5*WSIZE], edx	; r3
-	INC2_DSP
+	pop ebx
 	INC_DSP
 	mov eax, [ebx]		; ut2
 	mov edx, 0
@@ -2885,24 +2962,27 @@ _L_mstarslash:
 	push ebx  ; Win32 stdcall calling convention
 	LDSP
 	INC_DSP
-	INC_DSP
-	mov eax, [ebx]
+	mov eax, [ebx]   ; eax = +n2
+        pop ebx
+	cmp eax, 0
+	jz E_div_zero
+        push ebx
+        LDSP
+	INC2_DSP
+        mov eax, [ebx]   ; eax = n1
 	INC_DSP
 	xor eax, [ebx]
-	shr eax, 31
+	shr eax, 8*WSIZE-1   ; eax = sign(n1) xor sign(d1)
 	push eax	; keep sign of result -- negative is nonzero
-	LDSP
-	INC_DSP
-	STSP
+	sub ebx, 2*WSIZE
 	INC_DTSP
-	_ABS
-	LDSP
+	_ABS            ; abs(n1)
 	INC_DSP
 	STSP
 	INC_DTSP
 	call _L_dabs
 	LDSP
-	DEC_DSP
+	DEC_DSP         ; TOS = +n2
 	STSP
 	DEC_DTSP
 	call _L_udmstar
@@ -2918,6 +2998,7 @@ _L_mstarslash:
 	pop ebx    ; Win32 stdcall calling convention
 	ret
 mstarslash_neg:
+	LDSP
 	DNEGATE
 	xor eax, eax
 	pop ebx    ; Win32 stdcall calling convention
@@ -2984,17 +3065,17 @@ L_stod:
 
 L_stof:
         add _GlobalSp, WSIZE
-        inc _GlobalTp
-        mov ebx, _GlobalSp
+        INC_DTSP
+        LDSP
         FILD D[ebx]
         mov ebx, _GlobalTp
         mov B[ebx], OP_IVAL
         dec ebx
         mov B[ebx], OP_IVAL
-        dec _GlobalTp
-        dec _GlobalTp
-        mov ebx, _GlobalSp
-        sub ebx, WSIZE
+        DEC_DTSP
+        DEC_DTSP
+        LDSP
+        DEC_DSP
         FSTP Q[ebx]
         sub _GlobalSp, 2*WSIZE
         NEXT
@@ -3013,11 +3094,11 @@ L_dtof:
 
 L_froundtos:
         add _GlobalSp, WSIZE
-        mov ebx, _GlobalSp
+        LDSP
         FLD Q[ebx]
         add ebx, WSIZE
         FISTP D[ebx]
-        inc _GlobalTp
+        INC_DTSP
         mov ebx, _GlobalTp
         inc ebx
         mov B[ebx], OP_IVAL
