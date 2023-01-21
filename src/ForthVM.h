@@ -1,6 +1,6 @@
 // ForthVM.h
 //
-// Copyright (c) 1996--2021, Krishna Myneni
+// Copyright (c) 1996--2022, Krishna Myneni
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU
@@ -11,6 +11,11 @@
 
 #define DEFAULT_OUTPUT_FILENAME "kforth.out"
 
+int InitSystemVars ();
+int NullSystemVars ();
+#ifndef __NO_FPSTACK__
+int InitFpStack ();
+#endif
 int OpenForth ();
 void CloseForth ();
 bool InStringTable (char*);
@@ -20,6 +25,7 @@ vector<WordListEntry>::iterator LocateCfa  (void*);
 void ClearControlStacks ();
 void OpsCopyInt (long int, long int);
 void OpsPushInt (long int);
+void OpsPushTwoInt (long int, long int);
 void OpsPushDouble (double);
 int OpsCompileByte ();
 int OpsCompileInt ();
@@ -45,25 +51,37 @@ int CPP_previous();
 int CPP_order();
 int CPP_forth();
 int CPP_assembler();
+int CPP_traverse_wordlist();
+int CPP_name_to_string();
+int CPP_name_to_interpret();
+int CPP_lbracket();
+int CPP_rbracket();
+int CPP_noname();
 int CPP_colon();
 int CPP_semicolon();
+int CPP_compile_to_current();
+int CPP_compilename();
 int CPP_lparen();
 int CPP_dotparen();
 int CPP_tick();
+int CPP_tobody();
 int CPP_defined();
 int CPP_undefined();
 int CPP_find();
+int CPP_find_name_in();
+int CPP_find_name();
 int CPP_dot();
 int CPP_dotr();
 int CPP_udot0();
 int CPP_udot();
 int CPP_udotr();
-int CPP_uddotr();
 int CPP_ddot();
-int CPP_ddotr();
 int CPP_fdot();
 int CPP_fsdot();
 int CPP_dots();
+#ifndef __NO_FPSTACK__
+int CPP_fdots();
+#endif
 int CPP_emit();
 int CPP_cr();
 int CPP_spaces();
@@ -77,18 +95,22 @@ int CPP_words();
 int CPP_create();
 int CPP_alias();
 int CPP_variable();
+int CPP_twovariable();
 int CPP_fvariable();
 int CPP_constant();
+int CPP_twoconstant();
 int CPP_fconstant();
 int CPP_char();
 int CPP_bracketchar();
 int CPP_brackettick();
+int CPP_myname();
 int CPP_compilecomma();
 int CPP_bracketcompile();
 int CPP_postpone();
 int CPP_literal();
 int CPP_twoliteral();
 int CPP_sliteral();
+int CPP_fliteral();
 int CPP_cquote();
 int CPP_squote();
 int CPP_dotquote();
@@ -128,6 +150,9 @@ int CPP_refill();
 int CPP_state();
 int CPP_spstore();
 int CPP_rpstore();
+#ifndef __NO_FPSTACK__
+int CPP_fpstore();
+#endif
 }
 #endif
 

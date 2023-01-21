@@ -36,7 +36,7 @@ vmc.c
 
 #define byte unsigned char
 
-/*  Provided by ForthVM.cpp  */
+//  Provided by ForthVM.cpp
 extern int* GlobalSp;
 extern byte* GlobalIp;
 extern int* GlobalRp;
@@ -50,7 +50,7 @@ extern byte* BottomOfReturnTypeStack;
 #endif
 extern int CPP_bye();
 
-/* Provided by vm32.asm */
+// Provided by vm32.asm
 extern int Base;
 extern int State;
 extern char* pTIB;
@@ -60,6 +60,7 @@ extern char WordBuf[];
 extern char TIB[];
 extern char NumberBuf[];
 
+// Provided by vm32.asm
 extern int L_dnegate();
 extern int L_dplus();
 extern int L_dminus();
@@ -686,6 +687,28 @@ int C_parse ()
   PUSH_IVAL(count)
   return 0;
 }
+
+// PARSE-NAME  ( "<spaces>name<space>" -- c-addr u )
+// Skip leading spaces and parse name delimited by space;
+//   return string address and count.
+// Forth 2012 Core Extensions wordset 6.2.2020
+int C_parsename ()
+{
+  long int count = 0;
+  char *cp = pTIB;
+  const char* delim = "\t ";
+  // Skip leading delimiters
+  while (*pTIB && strchr(delim, *pTIB)) ++pTIB;
+  cp = pTIB;
+  while (*pTIB && (strchr(delim, *pTIB) == NULL)) {
+    ++pTIB;
+    ++count;
+  }
+  PUSH_ADDR((long int) cp)
+  PUSH_IVAL(count)
+  return 0;
+}
+
 /*----------------------------------------------------------*/
 
 int C_trailing ()

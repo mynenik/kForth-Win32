@@ -2,7 +2,7 @@
 ;
 ; The assembler portion of kForth 32-bit Virtual Machine
 ;
-; Copyright (c) 1998--2022 Krishna Myneni
+; Copyright (c) 1998--2023 Krishna Myneni
 ;
 ; This software is provided under the terms of the GNU
 ;   Affero General Public License (AGPL) v 3.0 or later.
@@ -72,7 +72,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _C_close, _C_read, _C_write, _C_ioctl ; 12 -- 15
           dd L_usleep, L_ms, _C_msfetch, L_nop     ; 16 -- 19
           dd L_fill, L_cmove, L_cmovefrom, _CPP_dotparen  ; 20 -- 23
-          dd _C_bracketsharp, L_nop, _C_fsync, _C_sharpbracket   ; 24 -- 27
+          dd _C_bracketsharp, L_execute_bc, _C_fsync, _C_sharpbracket   ; 24 -- 27
           dd _C_sharps, _CPP_squote, _CPP_cr, L_bl      ; 28 -- 31
           dd _CPP_spaces, L_store, _CPP_cquote, _C_sharp ; 32 -- 35
           dd _C_sign, L_mod, L_and, _CPP_tick      ; 36 -- 39
@@ -84,7 +84,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_lt, L_eq, L_gt, L_question      ; 60 -- 63
           dd L_fetch, L_addr, L_base, L_call   ; 64 -- 67
           dd L_definition, L_erase, L_fval, L_calladdr ; 68 -- 71
-          dd L_tobody, L_ival, _CPP_evaluate, _C_key   ; 72 -- 75
+          dd _CPP_tobody, L_ival, _CPP_evaluate, _C_key   ; 72 -- 75
           dd L_lshift, L_slashmod, L_ptr, _CPP_dotr   ; 76 -- 79
           dd _CPP_ddot, _C_keyquery, L_rshift, _CPP_dots ; 80 -- 83
           dd _C_accept, _CPP_char, _CPP_bracketchar, _C_word    ; 84 -- 87
@@ -133,7 +133,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _L_utmslash, L_utsslashmod, L_stsslashrem, _L_udmstar ; 256 -- 259
           dd _CPP_included, _CPP_include, _CPP_source, _CPP_refill ; 260 -- 263
           dd _CPP_state, _CPP_allocate, _CPP_free, _CPP_resize ; 264 -- 267
-          dd L_cputest, L_dsstar, _CPP_compilecomma, L_nop  ; 268 -- 271
+          dd L_cputest, L_dsstar, _CPP_compilecomma, _CPP_compilename  ; 268 -- 271
           dd _CPP_postpone, _CPP_nondeferred, _CPP_forget, L_nop ; 272 -- 275
           dd L_nop, L_nop, L_nop, L_nop ; 276 -- 279
           dd _C_tofloat, L_fsincos, _C_facosh, _C_fasinh ; 280 -- 283
@@ -144,7 +144,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_fliteral, _CPP_twovariable, _CPP_twoconstant, L_nop ; 300 -- 303
           dd _CPP_tofile, _CPP_console, _CPP_loop, _CPP_plusloop  ; 304 -- 307
           dd _CPP_unloop, _CPP_noname, L_nop, L_blank  ; 308 -- 311
-          dd L_slashstring, _C_trailing, _C_parse, L_nop ; 312 -- 315
+          dd L_slashstring, _C_trailing, _C_parse, _C_parsename ; 312 -- 315
           dd L_nop, L_nop, L_nop, L_nop  ; 316 -- 319
           dd _C_dlopen, _C_dlerror, _C_dlsym, _C_dlclose  ; 320 -- 323
           dd L_nop, _CPP_alias, _C_system, _C_chdir ; 324 -- 327
@@ -152,10 +152,10 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_getcurrent, _CPP_setcurrent, _CPP_getorder, _CPP_setorder ; 332 -- 335
           dd _CPP_searchwordlist, _CPP_definitions, _CPP_vocabulary, L_nop ; 336 -- 339
           dd _CPP_only, _CPP_also, _CPP_order, _CPP_previous ; 340 -- 343
-          dd _CPP_forth, _CPP_assembler, L_nop, L_nop ; 344 -- 347
-          dd L_nop, L_nop, _CPP_defined, _CPP_undefined ; 348 -- 351
-          dd L_nop, L_nop, L_nop, L_nop      ; 352 -- 355
-          dd L_nop, L_nop, L_nop, L_vmthrow  ; 356 -- 359
+          dd _CPP_forth, _CPP_assembler, _CPP_traverse_wordlist, _CPP_name_to_string ; 344 -- 347
+          dd _CPP_name_to_interpret, _CPP_name_to_compile, _CPP_defined, _CPP_undefined ; 348 -- 351
+          dd L_nop, L_nop, L_nop, _CPP_myname ; 352 -- 355
+          dd L_nop, L_nop, L_nop, L_vmthrow   ; 356 -- 359
           dd L_precision, L_setprecision, L_nop, _CPP_fsdot ; 360 -- 363
           dd L_nop, L_nop, _C_fexpm1, _C_flnp1  ; 364 -- 367
           dd _CPP_uddotr, _CPP_ddotr, L_f2drop, L_f2dup  ; 368 -- 371
@@ -165,14 +165,14 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_nop, L_nop, L_nop, L_nop  ; 384 -- 387
           dd L_nop, L_nop, L_nop, L_nop  ; 388 -- 391
           dd L_nop, L_nop, L_nop, L_nop  ; 392 -- 395
-          dd L_nop, L_nop, L_nop, L_nop  ; 396 -- 399
-          dd L_nop, L_nop, L_nop, L_nop  ; 400 -- 403
-          dd L_nop, L_uwfetch, L_ulfetch, L_slfetch ; 404 -- 407
+          dd _CPP_find_name_in, _CPP_find_name, L_nop, L_nop ; 396 -- 399
+          dd L_bool_not, L_bool_and, L_bool_or, L_bool_xor   ; 400 -- 403
+          dd L_boolean_query, L_uwfetch, L_ulfetch, L_slfetch ; 404 -- 407
           dd L_lstore, L_nop, L_nop, L_nop ; 408 -- 411
           dd L_nop, L_nop, L_nop, L_nop  ; 412 -- 415
           dd L_nop, L_udivmod, _L_uddivmod, L_nop  ; 416 -- 419
           dd L_nop, L_nop, L_nop, L_nop  ; 420 -- 423
-          dd L_nop, L_nop, L_nop, L_nop  ; 424 -- 427
+          dd L_fplusstore, L_pi, L_fsquare, L_nop  ; 424 -- 427
           dd L_nop, L_nop, L_nop, L_nop  ; 428 -- 431
           dd L_nop, L_nop, L_nop, L_nop  ; 432 -- 435
           dd L_nop, L_nop, L_nop, L_nop  ; 436 -- 439
@@ -182,6 +182,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _C_vprotect, L_nop, L_nop, L_nop   ; 452 -- 455
 _DATA ENDS
 
+public _JumpTable
 public _L_initfpu, _L_depth, _L_quit, _L_abort, _L_ret
 public _L_dabs, _L_dplus, _L_dminus, _L_dnegate
 public _L_mstarslash, _L_udmstar, _L_uddivmod, _L_utmslash
@@ -417,8 +418,40 @@ _ABS MACRO
 	xor eax, eax
 #EM
 
-; Dyadic relational operators (single length numbers)
+; Dyadic Logic operators
+; Regs: eax, ebx
+; In: none
+; Out: eax = 0 
+LOGIC_DYADIC MACRO  ; op
+        LDSP
+        mov eax, WSIZE
+        add ebx, eax
+        STSP
+        mov eax, [ebx]
+        #1 D[ebx + WSIZE], eax
+        mov eax, _GlobalTp
+        inc eax
+        mov _GlobalTp, eax
+        mov B[eax + 1], OP_IVAL
+        xor eax, eax
+#EM
 
+_AND MACRO
+        LOGIC_DYADIC and
+#EM
+
+_OR MACRO
+        LOGIC_DYADIC or
+#EM
+
+_XOR MACRO
+        LOGIC_DYADIC xor
+#EM
+
+; Dyadic relational operators (single length numbers)
+; Regs: eax, ebx, ecx
+; In: none
+; Out: eax = 0
 REL_DYADIC MACRO
         LDSP
         mov ecx, WSIZE
@@ -675,6 +708,46 @@ TNEG MACRO
         xor eax, eax
 #EM
 
+; Regs: eax, ebx, ecx
+; In: ebx = DSP
+; Out: eax = 0
+BOOLEAN_QUERY MACRO
+        _DUP
+        REL_ZERO setz
+        _SWAP
+        LDSP
+        mov D[ebx], -1
+        DEC_DSP
+        DEC_DTSP
+        STSP
+        REL_DYADIC sete
+        _OR
+#EM
+
+; Regs: eax, ebx, ecx
+; In: none
+; Out: eax = 0
+TWO_BOOLEANS MACRO
+        _OVER
+        _OVER
+        LDSP
+        BOOLEAN_QUERY
+        _SWAP
+        LDSP
+        BOOLEAN_QUERY
+        _AND
+#EM
+
+; Regs: ebx
+; In: none
+; Out: ebx = DSP
+CHECK_BOOLEAN MACRO
+        LDSP
+        _DROP
+        cmp D[ebx], -1
+        jnz E_ARG_TYPE_MISMATCH
+#EM
+
 ; Error jumps
 E_not_addr:
         mov eax, E_NOT_ADDR
@@ -889,14 +962,14 @@ ret1:
         xor eax, eax
         ret
 
-L_tobody:
-	LDSP
-	INC_DSP
-	mov ecx, [ebx]	; code address
-	inc ecx		; the data address is offset by one
-	mov ecx, [ecx]
-	mov [ebx], ecx
-	ret
+; L_tobody:
+;	LDSP
+;	INC_DSP
+;	mov ecx, [ebx]	; code address
+;	inc ecx		; the data address is offset by one
+;	mov ecx, [ecx]
+;	mov [ebx], ecx
+;	ret
 ;
 ; For precision delays, use MS instead of USLEEP
 ; Use USLEEP when task can be put to sleep and reawakened by OS
@@ -1192,6 +1265,49 @@ L_puship:
         xor eax, eax
         NEXT
 
+L_execute_bc:
+         mov ecx, ebp
+         mov ebx, _GlobalRp
+         mov [ebx], ecx
+         mov eax, WSIZE
+         sub ebx, eax
+         mov _GlobalRp, ebx
+         mov ebx, _GlobalRtp
+         mov B[ebx], OP_ADDR
+         dec ebx
+         mov _GlobalRtp, ebx
+         LDSP 
+         add ebx, eax
+         STSP 
+         mov eax, [ebx]
+         dec eax
+         mov ebp, eax
+         INC_DTSP
+         xor eax, eax
+        NEXT
+
+; L_execute:      
+;        movl %ebp, %ecx
+;        movl GlobalRp, %ebx
+;        movl %ecx, (%ebx)
+;        movl $WSIZE, %eax
+;        subl %eax, %ebx
+;        movl %ebx, GlobalRp
+;        movl GlobalRtp, %ebx
+;        movb $OP_ADDR, (%ebx)
+;        decl %ebx
+;        movl %ebx, GlobalRtp
+;        LDSP
+;        addl %eax, %ebx
+;        STSP
+;        movl (%ebx), %eax
+;        movl (%eax), %eax
+;        decl %eax
+;        movl %eax, %ebp
+;        INC_DTSP
+;        xor %eax, %eax
+;        NEXT
+
 L_execute:
         mov ecx, ebp
         mov ebx, _GlobalRp
@@ -1207,6 +1323,7 @@ L_execute:
         add ebx, eax
         STSP
         mov eax, [ebx]
+        mov eax, [eax]
         dec eax
         mov ebp, eax
         INC_DTSP
@@ -1582,6 +1699,35 @@ L_xor:
         mov B[ebx + 1], OP_IVAL
         xor eax, eax
         ret
+
+L_boolean_query:
+        BOOLEAN_QUERY
+        NEXT
+
+L_bool_not:
+        _DUP
+        BOOLEAN_QUERY
+        CHECK_BOOLEAN
+        _NOT
+        NEXT
+
+L_bool_and:
+        TWO_BOOLEANS
+        CHECK_BOOLEAN
+        _AND
+        NEXT
+
+L_bool_or:
+        TWO_BOOLEANS
+        CHECK_BOOLEAN
+        _OR
+        NEXT
+
+L_bool_xor:
+        TWO_BOOLEANS
+        CHECK_BOOLEAN
+        _XOR
+        NEXT
 
 L_lshift:
         LDSP
@@ -3395,6 +3541,13 @@ L_fsqrt:
         FSTP Q[ebx + WSIZE]
         NEXT
 
+L_fsquare: 
+        LDSP
+        FLD Q[ebx + WSIZE]
+        FMUL 0
+        FSTP Q[ebx + WSIZE]
+        NEXT
+
 L_fcos:
         LDSP
         FLD Q[ebx + WSIZE]
@@ -3418,6 +3571,46 @@ L_fatan2:
         FSTP Q[ebx + WSIZE]
         STSP
         INC2_DTSP
+        NEXT
+
+L_pi:
+        LDSP 
+        DEC_DSP
+        FLDPI 
+        FSTP Q[ebx]
+        DEC_DSP
+        STSP 
+        mov ebx, _GlobalTp
+        mov B[ebx], OP_IVAL
+        dec ebx
+        mov B[ebx], OP_IVAL
+        dec ebx
+        mov _GlobalTp, ebx
+        NEXT
+
+L_fplusstore:
+        mov ebx, _GlobalTp
+        inc ebx
+        mov al, B[ebx]
+        cmp al, OP_ADDR
+        jnz E_not_addr
+        mov B[ebx], OP_IVAL
+        inc ebx
+        mov B[ebx], OP_IVAL
+        inc ebx
+        mov B[ebx], OP_IVAL
+        mov _GlobalTp, ebx
+        LDSP
+        INC_DSP
+        mov ecx, [ebx]
+        INC_DSP
+        FLD Q[ebx]
+        INC_DSP
+        FLD Q[ecx]
+        FADDP
+        FSTP Q[ecx]
+        STSP
+        xor eax, eax
         NEXT
 
 L_backslash:

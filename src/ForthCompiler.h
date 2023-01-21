@@ -33,21 +33,19 @@ struct WordTemplate
 
 struct WordListEntry
 {
-  char WordName[32];
+  char WordName[128];
   word WordCode;
   byte Precedence;
   void* Cfa;
   void* Pfa;
 };
 
-typedef vector<WordListEntry>::iterator  WordIndex;
 
-class WordList : public vector<WordListEntry> 
+class WordList : public vector<WordListEntry*> 
 {
 public:
-   bool RetrieveFromName( char*, WordListEntry* );
-   bool RetrieveFromCfa( void*, WordListEntry* );
-   WordIndex IndexOf( char* );
+   WordListEntry* GetFromName( char* );
+   WordListEntry* GetFromCfa( void* );
    void RemoveLastWord( void );
 };
 
@@ -62,15 +60,15 @@ public:
 class SearchList : public vector<Vocabulary*>
 {
 public:
-   bool LocateWord( char*, WordListEntry* );
-   bool LocateCfa( void* cfa, WordListEntry* );
+   WordListEntry* LocateWord( char* );
+   WordListEntry* LocateCfa( void*  );
 };
 
 
-bool IsForthWord (char*, WordListEntry*);
+WordListEntry* IsForthWord (char*);
 int  ForthCompiler (vector<byte>*, long int*);
 int  ExecutionMethod (int);
-void CompileWord (WordListEntry);
+// void CompileWord (WordListEntry*);
 void OutputForthByteCode (vector<byte>*);
 void SetForthInputStream (istream&);
 void SetForthOutputStream (ostream&);
