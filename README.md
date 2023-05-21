@@ -1,6 +1,14 @@
 # kForth-Win32
 A 32-bit Forth system for Windows
 
+Copyright &copy; 1998--2023 Krishna Myneni, <krishna.myneni@ccreweb.org>
+
+## LICENSE
+
+kForth-Win32 for Windows is provided under the terms of the GNU
+Affero General Public License (AGPL), v3.0 or later.
+
+
 ## System Requirements
 
 OS: Windows 10
@@ -26,7 +34,7 @@ The A386 assembler is needed to assemble `vm.asm` to its object file, `vm.obj`. 
 
 5. Go to the Windows toolbar search field and type, "env". Then, click on "*Edit the environment variables for your account.*"
 
-6. Under "*User Variables for* [your account name]", click on "New". Then, set the variable name to `KFORTH_DIR` and the variable value to the full path specifying the location of the `forth-src` folder, *e.g.* `C:\Users\kamala\kForth-Win32-1.7.1\forth-src` . Click "OK".
+6. Under "*User Variables for* [your account name]", click on "New". Then, set the variable name to `KFORTH_DIR` and the variable value to the full path specifying the location of the `forth-src` folder, *e.g.* `C:\Users\kamala\kForth-Win32-2.0.1\forth-src` . Click "OK".
 
 7. When you launch kForth from its desktop shortcut, it will open up a console and start the Forth environment.
 
