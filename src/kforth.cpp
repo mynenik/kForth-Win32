@@ -32,7 +32,7 @@ const char* version=VERSION;
 #else
 const char* version="?";
 #endif
-const char* build="2023-05-21";
+const char* build="2023-10-26";
 
 #include <iostream>
 #include <fstream>
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 	if (!strcmp(argv[i], "-D")) {
 	    debug = true;
 	  }
-	else if (!strcmp(argv[i], "-e ")) {
+	else if (!strcmp(argv[i], "-e")) {
 	  if (argc > i) { 
 	    initial_commands << argv[i+1] << endl;
 	  }
@@ -93,7 +93,6 @@ int main(int argc, char *argv[])
       }
       pSS = new istringstream(initial_commands.str());
     }
-
     if (debug) {
        cout << '\n' << nWords << " words defined." << endl;
        cout << "Jump Table address:  " << &JumpTable << endl;
