@@ -172,8 +172,8 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_nop, L_nop, L_nop, L_nop  ; 412 -- 415
           dd L_nop, L_udivmod, _L_uddivmod, L_nop  ; 416 -- 419
           dd L_nop, L_nop, L_nop, L_nop  ; 420 -- 423
-          dd L_fplusstore, L_pi, L_fsquare, L_nop  ; 424 -- 427
-          dd L_nop, L_nop, L_nop, L_nop  ; 428 -- 431
+          dd L_fplusstore, L_pi, L_fsquare, L_starplus  ; 424 -- 427
+          dd L_nop, L_nop, L_fsl_mat_addr, L_nop        ; 428 -- 431
           dd L_nop, L_nop, L_nop, L_nop  ; 432 -- 435
           dd L_nop, L_nop, L_nop, L_nop  ; 436 -- 439
           dd L_nop, L_nop, L_nop, L_nop  ; 440 -- 443
@@ -2598,6 +2598,45 @@ L_mul:
         xor eax, eax
         NEXT
 
+L_starplus:
+	LDSP
+	INC_DSP
+	mov ecx, [ebx]
+	INC_DSP
+	STSP
+	mov eax, [ebx]
+	INC_DSP
+	imul D[ebx]
+	add eax, ecx
+	mov D[ebx], eax
+	INC2_DTSP
+	xor eax, eax
+	NEXT
+
+L_fsl_mat_addr:
+	LDSP
+	INC_DSP
+	mov ecx, [ebx]  ; ecx = j (column index)
+	INC_DSP
+	STSP
+	mov edx, [ebx]  ; edx = i (row index)
+	mov eax, [ebx+WSIZE]  ; address of first element
+	sub eax, 2*WSIZE  ; eax = a - 2 cells
+	push edi
+	mov edi, eax
+	mov eax, [eax]  ; eax = ncols
+	imul edx        ; eax = i*ncols
+	add ecx, eax    ; ecx = i*ncols + j
+	mov eax, edi
+	pop edi
+	add eax, WSIZE
+	mov eax, [eax]  ; eax = size
+	imul ecx        ; eax = size*(i*ncols + j)
+	add [ebx + WSIZE], eax  ; TOS = a + eax
+	INC2_DTSP
+	xor eax, eax
+	NEXT
+	
 L_div:
         LDSP
 	INC_DSP
