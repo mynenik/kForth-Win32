@@ -2,7 +2,7 @@
 ;
 ; The assembler portion of kForth 32-bit Virtual Machine
 ;
-; Copyright (c) 1998--2023 Krishna Myneni
+; Copyright (c) 1998--2024 Krishna Myneni
 ;
 ; This software is provided under the terms of the GNU
 ;   Affero General Public License (AGPL) v 3.0 or later.
@@ -32,7 +32,8 @@ OP_ADDR equ 65
 OP_FVAL equ 70
 OP_IVAL equ 73
 OP_RET  equ 238
-SIGN_MASK  equ  080000000H
+SIGN_MASK       equ 080000000H
+MAX_SHIFT_COUNT equ WSIZE*8-1
 
 ; Error Codes must be same as those in VMerrors.h
 
@@ -1733,6 +1734,10 @@ L_lshift:
         LDSP
         _DROP
 	mov ecx, [ebx]
+	cmp ecx, MAX_SHIFT_COUNT
+	jbe lshift1
+	mov D[ebx + WSIZE], 0
+lshift1:
 	mov eax, [ebx + WSIZE]
         shl eax, cl
 	mov [ebx + WSIZE], eax
@@ -1743,6 +1748,11 @@ L_rshift:
         LDSP
 	_DROP
 	mov ecx, [ebx]
+	cmp ecx, MAX_SHIFT_COUNT
+	jbe rshift1
+	mov D[ebx + WSIZE], 0
+	NEXT
+rshift1:
 	mov eax, [ebx + WSIZE]
 	shr eax, cl
 	mov [ebx + WSIZE], eax
