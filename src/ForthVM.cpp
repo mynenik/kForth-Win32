@@ -3,7 +3,7 @@
 // The C++ portion of the kForth Virtual Machine to 
 // execute Forth byte code.
 //
-// Copyright (c) 1996--2023 Krishna Myneni,
+// Copyright (c) 1996--2024 Krishna Myneni,
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU
@@ -60,6 +60,7 @@ extern WordListEntry* pNewWord;
 extern vector<byte>* pCurrentOps;
 
 extern size_t NUMBER_OF_INTRINSIC_WORDS;
+extern size_t NUMBER_OF_ROOT_WORDS;
 
 extern "C" {
 
@@ -68,11 +69,7 @@ extern "C" {
   void  set_start_time(void);
   void  save_term(void);
   void  restore_term(void);
-#ifndef _WIN32_
-  void  strupr (char*);
-#else
   char* strupr (char*);
-#endif
   char* ExtractName(char*, char*);
   int   IsFloat(char*, double*);
   int   IsInt(char*, int*);
@@ -282,7 +279,7 @@ void WordList::RemoveLastWord ()
 	delete pWord;
 }
 
-WordListEntry* WordList::GetFromName (char* name)
+WordListEntry* WordList::GetFromName (const char* name)
 {
    vector<WordListEntry*>::iterator i;
    if (size()) {
@@ -350,7 +347,7 @@ int Vocabulary::Initialize( WordTemplate wt[], int n )
 }
 //---------------------------------------------------------------
 
-WordListEntry* SearchList::LocateWord (char* name)
+WordListEntry* SearchList::LocateWord (const char* name)
 {
 // Iterate through the search list, to look for an entry
 //   with the specified name. If found, return the pointer
@@ -422,7 +419,7 @@ int OpenForth ()
 
     // The Dictionary initially contains the Root, Forth, and Assembler 
     // wordlists.
-    Voc_Root.Initialize(RootWords, 6);
+    Voc_Root.Initialize(RootWords, NUMBER_OF_ROOT_WORDS);
     Dictionary.push_back(&Voc_Root);
     Voc_Forth.Initialize(ForthWords, NUMBER_OF_INTRINSIC_WORDS);
     Dictionary.push_back(&Voc_Forth);
@@ -1233,7 +1230,6 @@ int CPP_compilename ()
 int CPP_postpone ()
 {
     char token[128];
-    byte* bp;
 
     pTIB = ExtractName (pTIB, token);
     strupr(token);
@@ -1995,6 +1991,56 @@ int CPP_queryallot ()
   return e;
 }
 
+// SYNONYM ( "<newname>" "<oldname>" -- )
+// Create a word NewName with the same with the same interpretation
+// and compilation semantics of the existing word, OldName.
+// Forth 2012 Tools Ext 15.6.2.2264
+int CPP_synonym ()
+{
+    char NewName[256], OldName[256], s[256];
+    int ncNew, ncOld, ecode = 0;
+
+    pTIB = ExtractName( pTIB, NewName );
+    pTIB = ExtractName( pTIB, OldName );
+    strcpy(s, pTIB);  // remaining part of input line in TIB
+
+    strupr(NewName);
+    strupr(OldName);
+    ncNew = strlen(NewName);
+    ncOld = strlen(OldName);
+
+    if (ncOld) {
+      WordListEntry* nt = SearchOrder.LocateWord(OldName);
+      if (nt) {
+        if (ncNew) {
+          pNewWord = new WordListEntry;
+          strcpy (pNewWord->WordName, NewName);
+          pNewWord->WordCode = OP_DEFINITION;
+          pNewWord->Pfa = NULL;
+          pNewWord->Precedence = nt->Precedence;
+          byte* p = new byte[3*WSIZE];
+          pNewWord->Cfa = p;
+          p[0] = OP_ADDR;
+          *((long int*) &p[1]) = (long int) nt->Cfa;
+          p[WSIZE+1] = OP_EXECUTE_BC;
+          p[WSIZE+2] = OP_RET;
+         pCompilationWL->push_back(pNewWord);
+        }
+        else
+          ecode = E_V_CREATE;
+      }
+      else
+        ecode = E_V_UNDEFINED_WORD;
+    }
+    else
+      ecode = E_V_INVALID_NAMEARG;
+
+    strcpy(TIB, s);  // restore TIB with remaining input line
+    pTIB = TIB;      // restore ptr
+
+    return ecode;
+}
+
 // ALIAS  ( xt "name" -- )
 // Create a new dictionary entry for "name" with execution
 // semantics defined by xt.
@@ -2079,18 +2125,46 @@ int CPP_twoconstant ()
   // stack: ( n1 n2 -- )
   if (CPP_create()) return E_V_CREATE;
   WordListEntry* pWord = *(pCompilationWL->end() - 1);
-  pWord->WordCode = OP_2VAL;
+  // pWord->WordCode = OP_2VAL;
   pWord->Pfa = new long int[2];
   DROP
   *((long int*) pWord->Pfa) = TOS;
+  bool b2 = IS_ADDR;
   DROP
   *((long int*) pWord->Pfa + 1) = TOS;
-  byte *bp = new byte[WSIZE+3];
-  pWord->Cfa = bp;
-  bp[0] = OP_ADDR;
-  *((long int*) &bp[1]) = (long int) pWord->Pfa;
-  bp[WSIZE+1] = OP_2FETCH;
-  bp[WSIZE+2] = OP_RET;
+  bool b1 = IS_ADDR;
+  if (!(b1 || b2)) {
+    pWord->WordCode = OP_2VAL;
+    byte *p = new byte[WSIZE+3];
+    pWord->Cfa = p;
+    p[0] = OP_ADDR;
+    *((long int*) &p[1]) = (long int) pWord->Pfa;
+    p[WSIZE+1] = OP_2FETCH;
+    p[WSIZE+2] = OP_RET;
+  }
+  else {
+    pWord->WordCode = OP_DEFINITION;
+    byte *p = new byte[4*WSIZE];
+    pWord->Cfa = p;
+    p[0] = OP_ADDR;
+    long int *pval = (long int *) pWord->Pfa;
+    *((long int*) &p[1]) = (long int) (pval + 1);
+    p[WSIZE+1] = OP_FETCH;
+    p[WSIZE+2] = OP_ADDR;
+    *((long int*) &p[WSIZE+3]) = (long int) pval;
+    p[2*WSIZE+3] = OP_FETCH;
+    p[2*WSIZE+4] = OP_RET;
+    if (b1 && (!b2)) {
+      p[WSIZE+1]   = OP_AFETCH;
+    }
+    else if ((!b1) && b2) {
+      p[2*WSIZE+3] = OP_AFETCH;
+    }
+    else {
+      p[WSIZE+1]   = OP_AFETCH;
+      p[2*WSIZE+3] = OP_AFETCH;
+    }
+  }
   return 0;
 }
 //------------------------------------------------------------------

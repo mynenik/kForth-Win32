@@ -142,7 +142,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _C_falog, L_dzerolt, L_dmax, L_dmin  ; 288 -- 291
           dd L_dtwostar, L_dtwodiv, _CPP_uddot, L_within  ; 292 -- 295
           dd _CPP_twoliteral, _C_tonumber, _C_numberquery, _CPP_sliteral ; 296 -- 299
-          dd _CPP_fliteral, _CPP_twovariable, _CPP_twoconstant, L_nop ; 300 -- 303
+          dd _CPP_fliteral, _CPP_twovariable, _CPP_twoconstant, _CPP_synonym ; 300 -- 303
           dd _CPP_tofile, _CPP_console, _CPP_loop, _CPP_plusloop  ; 304 -- 307
           dd _CPP_unloop, _CPP_noname, L_nop, L_blank  ; 308 -- 311
           dd L_slashstring, _C_trailing, _C_parse, _C_parsename ; 312 -- 315

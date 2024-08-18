@@ -3,7 +3,7 @@
 // A compiler to generate kForth Byte Code (FBC) from expressions
 //   or programs
 //
-// Copyright (c) 1998--2021 Krishna Myneni, 
+// Copyright (c) 1998--2024 Krishna Myneni, 
 // <krishna.myneni@ccreweb.org>
 //
 // Contributors:
@@ -35,7 +35,8 @@ const int NONDEFERRED = PRECEDENCE_NON_DEFERRED;
 
 size_t NUMBER_OF_INTRINSIC_WORDS =
    sizeof(ForthWords) / sizeof(ForthWords[0]);
-
+size_t NUMBER_OF_ROOT_WORDS =
+   sizeof(RootWords) / sizeof(RootWords[0]);
 
 extern bool debug;
 
@@ -64,11 +65,7 @@ extern "C" {
   int CPP_compile_to_current();
 
   // Provided by vmc.c
-#ifndef _WIN32_
-  void strupr (char*);
-#else
   char* strupr (char*);
-#endif
   char* ExtractName(char*, char*);
   int   IsFloat(char*, double*);
   int   IsInt(char*, long int*);
@@ -216,11 +213,9 @@ int ForthCompiler (vector<byte>* pOpCodes, long int* pLc)
   long int ival, *sp;
   vector<byte>::iterator ib1, ib2;
   WordListEntry* pWord;
-  byte opval, *ip, *tp;
+  byte *tp;
 
   if (debug) cout << ">Compiler Sp: " << GlobalSp << " Rp: " << GlobalRp << endl;
-
-  ip = (byte *) &ival;
 
   linecount = *pLc;
   pCurrentOps = pOpCodes;

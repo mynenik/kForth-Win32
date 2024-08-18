@@ -839,10 +839,10 @@ int C_tonumber ()
 {
   /* stack: ( ud1 a1 u1 -- ud2 a2 u2 | translate characters into ud number ) */
 
-  unsigned i, ulen, uc;
+  unsigned long i, ulen, uc;
   int c;
   char *cp;
-  ulen = (unsigned) *(GlobalSp + 1);
+  ulen = (unsigned long) *(GlobalSp + 1);
   if (ulen == 0) return 0;
   uc = ulen;
   DROP
@@ -874,7 +874,7 @@ int C_tonumber ()
         --uc; ++cp;
   }
 
-  TOS = (int) cp;
+  TOS = (long int) cp;
   DEC_DSP
   TOS = uc;
   DEC_DSP
@@ -890,7 +890,7 @@ int C_numberquery ()
   /* stack: ( ^str -- d b | translate characters into number using current base ) */
 
   char *pStr;
-  int b, sign, nc;
+  long int b, sign, nc;
 
   b = FALSE;
   sign = FALSE;
@@ -931,7 +931,7 @@ int C_tofloat ()
   char s[256], *cp;
   double f;
   unsigned nc, u;
-  int b;
+  long int b;
 
   DROP
   nc = TOS;
