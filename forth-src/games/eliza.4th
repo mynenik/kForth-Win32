@@ -17,7 +17,7 @@
 * )
 \ ==== Definitions needed for ANS Forths====
 
-( Remove comment markers if needed. 
+( \ start of comment
 
  synonym a@ @ 			\ ANS Forth 
  : ?allot  HERE SWAP ALLOT ;	\ ANS Forth 
@@ -25,15 +25,14 @@
  : 2+ 2 + ;      		\ Gforth 
  : 2- 2 - ;      		\ Gforth 
 
- )
+ ) \ end of comment
 
 \ =====End of defs for ANS Forth============
 
-\ The following files are available for ANS Forths as well
-include ans-words.4th
-include strings.4th    
-include utils.4th
-include ansi.4th
+include ans-words
+include strings    
+include ansi
+include utils
 
 DECIMAL
 
@@ -67,8 +66,7 @@ VARIABLE  last-c
 VARIABLE  char#
 VARIABLE  phrase_voc
 
-: Rmargin	C/L 10 - ;
-
+: Rmargin	C/L 10 - ;	
 : CR		CR  0 char# ! ;
 : SPACE		char# @ IF  BL EMIT  1 char# +! THEN ;
 
@@ -103,23 +101,23 @@ variable echo
 
 
 
-S" Please do not repeat yourself."	$constant  Notrepeat$
-S" GOODBYE"				$constant  Goodbye$
-S" Ok, hope to see you again."	 	$constant  Farewell$
-S" Hello..."				$constant  Hello$
-S" The doctor is in..please stand by."	$constant  Doctorin$
-S" Welcome to my shrinker's office."   	$constant  Session$
+S" Please do not repeat yourself."	2constant  Notrepeat$
+S" GOODBYE"				2constant  Goodbye$
+S" Ok, hope to see you again."	 	2constant  Farewell$
+S" Hello..."				2constant  Hello$
+S" The doctor is in..please stand by."	2constant  Doctorin$
+S" Welcome to my shrinker's office."   	2constant  Session$
 
-S" ARE YOU"				$constant  Areyou$	
-S" are_you"				$constant  Are_you$	
-S" YOU ARE"				$constant  Youare$  	
-S" you_are"				$constant  You_are$
-S" AM I"				$constant  AmI$
-S" am_I"				$constant  Am_I$
-S" I AM"				$constant  Iam$
-S" I_am"				$constant  I_am$
-S" YOU"					$constant  YOU$
-S" MY"					$constant  my$
+S" ARE YOU"				2constant  Areyou$	
+S" are_you"				2constant  Are_you$	
+S" YOU ARE"				2constant  Youare$  	
+S" you_are"				2constant  You_are$
+S" AM I"				2constant  AmI$
+S" am_I"				2constant  Am_I$
+S" I AM"				2constant  Iam$
+S" I_am"				2constant  I_am$
+S" YOU"					2constant  YOU$
+S" MY"					2constant  my$
 
 
 S" What does that suggest to you?"
@@ -250,7 +248,7 @@ S" I think perhaps worries about your* are bothering you"
 
 
 : next-word  ( -- a u )	
-	^old COUNT parse_token strpck
+	^old COUNT parse-token strpck
 	-ROT ^old pack COUNT ;
 
 : conjugated					\ <addr><u> -- <adr><u>
