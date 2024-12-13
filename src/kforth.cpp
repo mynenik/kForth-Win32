@@ -32,7 +32,7 @@ const char* version=VERSION;
 #else
 const char* version="?";
 #endif
-const char* build="2024-08-18";
+const char* build="2024-12-13";
 
 #include <iostream>
 #include <fstream>
@@ -47,6 +47,7 @@ using namespace std;
 #include "VMerrors.h"
 
 extern vector<WordList> Dictionary;
+extern vector<byte>* pCurrentOps;
 
 extern "C" long int* JumpTable;
 extern "C" long int* BottomOfStack;
@@ -122,7 +123,8 @@ int main(int argc, char *argv[])
     char s[256], input_line[1024];
 
     while (1) {
-        // Obtain commands and execute
+        pCurrentOps = &op;
+	// Obtain commands and execute
         do {
 	    cin.getline( input_line, 1024 );
 	    if (cin.fail()) CPP_bye();
@@ -130,7 +132,7 @@ int main(int argc, char *argv[])
 
             pSS = new istringstream(s);
 	    SetForthInputStream (*pSS);	    
-            ec = ForthCompiler (&op, &line_num);
+            ec = ForthCompiler (pCurrentOps, &line_num);
 	    delete pSS;
 	    pSS = NULL;
 
