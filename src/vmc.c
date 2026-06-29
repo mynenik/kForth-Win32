@@ -3,7 +3,7 @@ vmc.c
 
   C portion of the kForth virtual machine
 
-  Copyright (c) 1998--2023 Krishna Myneni, 
+  Copyright (c) 1998--2026 Krishna Myneni, 
   <krishna.myneni@ccreweb.org>
 
   This software is provided under the terms of the GNU
@@ -717,6 +717,7 @@ int C_parsename ()
   }
   PUSH_ADDR((long int) cp)
   PUSH_IVAL(count)
+  if (*pTIB && strchr(delim, *pTIB)) ++pTIB;
   return 0;
 }
 
