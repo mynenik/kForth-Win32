@@ -530,31 +530,16 @@ int C_accept ()
 }
 
 /*----------------------------------------------------------*/
-
-char* ExtractName (char* str, char* name)
+#ifndef _WIN32_
+char* strupr (char* p)
 {
-/*
-Starting at ptr str, extract the non delimiter text into
-a buffer starting at name with null terminator appended
-at the end. Return a pointer to the next position in str.
-*/
-
-    const char* delim = "\n\r\t ";
-    char *pStr = str, *pName = name;
-
-    if (*pStr)
-      {
-        while (strchr(delim, *pStr)) ++pStr;
-        while (*pStr && (strchr(delim, *pStr) == NULL))
-          {
-            *pName = *pStr;
-            ++pName;
-            ++pStr;
-          }
-      }
-    *pName = 0;
-    return pStr;
+/* convert string to upper case  */
+  char* cp = p;
+  while (*cp) {*cp = toupper(*cp); ++cp;}
+  return p;
 }
+#endif
+
 /*----------------------------------------------------------*/
 
 int IsFloat (char* token, double* p)
@@ -567,9 +552,10 @@ return False.
     char s[256];
     char *pStr = &s[0];
     char *pEnd;
-    int f = FALSE;
+    int b = FALSE;
   
     strcpy(s, token);
+    strupr(s);
 
     if (strchr(pStr, 'E'))
     {
@@ -591,11 +577,11 @@ return False.
               if (*pStr == 'E') *pStr = '\0';
             }
             *p = strtod(s, &pEnd);
-             if (*pEnd == 0) f = TRUE;
+             if (*pEnd == 0) b = TRUE;
         }
     }
 
-    return f;
+    return b;
 }
 /*----------------------------------------------------------*/
 
@@ -676,13 +662,13 @@ int C_word ()
 
 // PARSE  ( char "ccc<char>" -- c-addr u )
 // Parse text delimited by char; return string address and count.
-// Forth-94 Core Extensions wordset 6.2.2008
+// Forth 2012 Core Extensions wordset 6.2.2008
 int C_parse ()
 {
   DROP
   char delim = TOS;
   char *cp = pTIB;
-  int count = 0;
+  long int count = 0;
   if (*pTIB)
     {
 

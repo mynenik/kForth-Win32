@@ -3,7 +3,7 @@
 // The C++ portion of the kForth Virtual Machine to 
 // execute Forth byte code.
 //
-// Copyright (c) 1996--2024 Krishna Myneni,
+// Copyright (c) 1996--2026 Krishna Myneni,
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU
@@ -70,14 +70,12 @@ extern "C" {
   void  save_term(void);
   void  restore_term(void);
   char* strupr (char*);
-  char* ExtractName(char*, char*);
-  int   IsFloat(char*, double*);
-  int   IsInt(char*, int*);
   int   isBaseDigit(int);
   int   C_bracketsharp(void);
   int   C_sharps(void);
   int   C_sharpbracket(void);
   int   C_word(void);
+  int   C_parsename(void);
 
   // vm functions provided by vm.s/vm-fast.s
 
@@ -959,9 +957,7 @@ int CPP_name_to_string()
     CHK_ADDR
     WordListEntry* pWord = (WordListEntry*) TOS;  // get nt from stack
     char* cp = (char*) pWord->WordName;
-    PUSH_ADDR( (long int) cp )
-    size_t len = strlen(cp);
-    PUSH_IVAL( (long int) len )
+    PUSH_CSTRING( cp )
     return 0;	
 }
 
@@ -1009,27 +1005,30 @@ int CPP_name_to_compile()
 // Forth 2012 Core Wordset 6.1.1000
 int CPP_create ()
 {
-    char token[128];
-    pTIB = ExtractName(pTIB, token);
-    int nc = strlen(token);
+    int ecode = 0;
+    char name[128];
+    C_parsename();  // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP
+    strncpy(name, (char*) TOS, nc);
+    name[nc] = 0;
 
-    if (nc)
-    {
+    if (nc) {
       pNewWord = new WordListEntry;
-      strupr(token);
-      strcpy (pNewWord->WordName, token);
+      strupr(name);
+      strcpy (pNewWord->WordName, name);
       pNewWord->WordCode = OP_ADDR;
       pNewWord->Pfa = NULL;
       pNewWord->Cfa = NULL;
       pNewWord->Precedence = 0;
 
       pCompilationWL->push_back(pNewWord);
-      return 0;
     }
-    else
-    {
-      return E_V_CREATE;  // create failed
+    else {
+      ecode = E_V_ZEROLENGTH_NAME;
     }
+    return ecode;
 }
 
 // :NONAME ( -- )
@@ -1053,24 +1052,34 @@ int CPP_noname()
 // Forth 2012 Core Wordset 6.1.0450
 int CPP_colon()
 {
+    int ecode = 0;
     PendingOps.push(pCurrentOps);
     pCurrentOps = new vector<byte>;
 // fixme: push recursion stack and allocate new one
     while (!recursestack.empty()) recursestack.pop();
     State = TRUE;
 
-    char WordToken[256];
-    pTIB = ExtractName (pTIB, WordToken);
-    strupr(WordToken);
+    char name[128];
+    C_parsename(); // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP
+    strncpy(name, (char*) TOS, nc);
+    name[nc] = 0;
+    if (nc) {
+      strupr(name);
+      pNewWord = new WordListEntry;
+      strcpy (pNewWord->WordName, name);
+      pNewWord->WordCode = OP_DEFINITION;
+      pNewWord->Precedence = PRECEDENCE_NONE;
+      pNewWord->Pfa = NULL;
+      pNewWord->Cfa = NULL;
 
-    pNewWord = new WordListEntry;
-    strcpy (pNewWord->WordName, WordToken);
-    pNewWord->WordCode = OP_DEFINITION;
-    pNewWord->Precedence = PRECEDENCE_NONE;
-    pNewWord->Pfa = NULL;
-    pNewWord->Cfa = NULL;
+      PendingDefStack.push(pNewWord);
+    }
+    else
+      ecode = E_V_ZEROLENGTH_NAME;
 
-    PendingDefStack.push(pNewWord);
     return 0;
 }
 
@@ -1229,11 +1238,16 @@ int CPP_compilename ()
 // Forth 2012 Core wordset 6.1.2033
 int CPP_postpone ()
 {
-    char token[128];
-
-    pTIB = ExtractName (pTIB, token);
-    strupr(token);
-    WordListEntry* pWord = SearchOrder.LocateWord(token);
+    int ecode = 0;
+    char name[128];
+    C_parsename(); // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP
+    strncpy(name, (char*) TOS, nc);
+    name[nc] = 0;
+    strupr(name);
+    WordListEntry* pWord = SearchOrder.LocateWord(name);
     if (pWord) {
       if (pWord->Precedence & PRECEDENCE_IMMEDIATE) {
         PUSH_ADDR( (long int) pWord )
@@ -1250,7 +1264,10 @@ int CPP_postpone ()
 	  pNewWord->Precedence |= PRECEDENCE_NON_DEFERRED;
       }
     }
-    return 0;  
+    else
+      ecode = E_V_UNDEFINED_WORD;
+
+    return ecode;  
 }
 
 
@@ -1672,10 +1689,15 @@ int CPP_dots ()
 // Forth 2012 Core Wordset 6.1.0070
 int CPP_tick ()
 {
+    int ecode = 0;
     char name[128];
-    pTIB = ExtractName(pTIB, name);
+    C_parsename(); // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP
+    strncpy(name, (char*) TOS, nc);
+    name[nc] = 0;
     strupr(name);
-    int e = 0;
     WordListEntry* pWord = SearchOrder.LocateWord( name );
     if ( pWord )
     {
@@ -1683,9 +1705,9 @@ int CPP_tick ()
         PUSH_ADDR( ((long int) p) )
     }
     else
-	e = E_V_UNDEFINED_WORD;
+	ecode = E_V_UNDEFINED_WORD;
     
-    return e;
+    return ecode;
 }
 
 // >BODY  ( xt -- pfa | 0 )
@@ -1997,17 +2019,26 @@ int CPP_queryallot ()
 // Forth 2012 Tools Ext 15.6.2.2264
 int CPP_synonym ()
 {
-    char NewName[256], OldName[256], s[256];
+    char NewName[128], OldName[128], s[128];
     int ncNew, ncOld, ecode = 0;
 
-    pTIB = ExtractName( pTIB, NewName );
-    pTIB = ExtractName( pTIB, OldName );
+    C_parsename();
+    DROP
+    ncNew = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP 
+    strncpy(NewName, (char*) TOS, ncNew);
+    NewName[ncNew] = 0;
+    C_parsename();
+    DROP 
+    ncOld = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP
+    strncpy(OldName, (char*) TOS, ncOld);
+    OldName[ncOld] = 0;
+    
     strcpy(s, pTIB);  // remaining part of input line in TIB
 
     strupr(NewName);
     strupr(OldName);
-    ncNew = strlen(NewName);
-    ncOld = strlen(OldName);
 
     if (ncOld) {
       WordListEntry* nt = SearchOrder.LocateWord(OldName);
@@ -2237,33 +2268,38 @@ int CPP_myname()
 // Forth 2012 Tools Extensions Wordset 15.6.2.1580
 int CPP_forget ()
 {
-  char token[128];
+    int ecode = 0;
+    char name[128];
+    C_parsename(); // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 128 ? TOS : 127 ;
+    DROP
+    strncpy(name, (char*) TOS, nc);
+    name[nc] = 0;
+    strupr(name);
+  
+    WordListEntry* pWord = pCompilationWL->GetFromName( name );
 
-  pTIB = ExtractName (pTIB, token);
-  strupr(token);
-  WordListEntry* pWord = pCompilationWL->GetFromName( token );
+    if (pWord) {
+      vector<WordListEntry*>::iterator i = pCompilationWL->begin();
+      vector<WordListEntry*>::iterator j = pCompilationWL->end() - 1;
 
-  if (pWord) {
-    vector<WordListEntry*>::iterator i = pCompilationWL->begin();
-    vector<WordListEntry*>::iterator j = pCompilationWL->end() - 1;
-
-    while (j > i) {
-      if (pWord == *j) break;
-      --j;
+      while (j > i) {
+        if (pWord == *j) break;
+        --j;
+      }
+      i = j;
+      j = pCompilationWL->end();
+      // Remove all words from end() to i
+      while (i < j) {
+        --j;
+        pCompilationWL->RemoveLastWord();
+      }
     }
-    i = j;
-    j = pCompilationWL->end();
-    // Remove all words from end() to i
-    while (i < j) {
-      --j;
-      pCompilationWL->RemoveLastWord();
+    else {
+      ecode = E_V_INVALID_FORGET;
     }
-  }
-  else
-  {
-      *pOutStream << "No such word in the current wordlist: " << token << '\n';
-  }
-  return 0;
+    return ecode;
 }
 //-------------------------------------------------------------------
 
@@ -2278,34 +2314,41 @@ int CPP_bye ()
   return 0;
 }
 //--------------------------------------------------------------------
-
+// >FILE ( "<spaces>filename<space>" -- )
+// Redirect output to file
+// Non-standard word
 int CPP_tofile ()
 {
-  char filename[128];
-  *filename = 0;
+    int ecode = 0;
+    char filename[256], s[256];
 
-  pTIB = ExtractName (pTIB, filename);
-  if (*filename == 0)
-    {
+    *filename = 0;
+    C_parsename(); // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 256 ? TOS : 255 ;
+    DROP
+    strncpy(filename, (char*) TOS, nc);
+    filename[nc] = 0;
+
+    if (*filename == 0) {
       strcpy (filename, DEFAULT_OUTPUT_FILENAME);
       // cout << "Output redirected to " << filename << '\n';
     }
-  ofstream *pFile = new ofstream (filename);
-  if (! pFile->fail())
-    {
-      if (FileOutput)
-	{ 
+    ofstream *pFile = new ofstream (filename);
+    if (! pFile->fail()) {
+      if (FileOutput) { 
 	  (*((ofstream*) pOutStream)).close();  // close current file output stream
 	  delete pOutStream;
-	} 
+      } 
       pOutStream = pFile;
       FileOutput = TRUE;
     }
-  else
-    {
-      *pOutStream << "Failed to open output file stream.\n";
+    else {
+      // *pOutStream << "Failed to open output file stream.\n";
+      ecode = E_V_OPEN_FILE;
     }
-  return 0;  
+
+    return ecode;  
 }
 //--------------------------------------------------------------------
 
@@ -2949,104 +2992,97 @@ int CPP_evaluate ()
 }
 
 // INCLUDED  ( c-addr u -- )
-//
-// Forth 2012 
+// Interpret the Forth statements in the file specified by
+// c-addr u
+// Forth-94/2012 11.6.1.1718  File
 int CPP_included()
 {
-  // include the filename given on the stack as a counted string
-  char filename[256];
-  DROP
-  long int nc = TOS;
-  DROP
-  char *cp = (char*) TOS;
+    char filename[256];
+    DROP
+    long int nc = TOS;
+    DROP
+    char *cp = (char*) TOS;
 
-  if ((nc < 0) || (nc > 255)) return E_V_OPEN_FILE;
+    if ((nc < 0) || (nc > 255)) return E_V_OPEN_FILE;
 
-  memcpy (filename, cp, nc);
-  filename[nc] = 0;
-  if (!strchr(filename, '.')) strcat(filename, ".4th");
+    memcpy (filename, cp, nc);
+    filename[nc] = 0;
+    if (!strchr(filename, '.')) strcat(filename, ".4th");
 
-  ifstream f(filename);
-  if (!f)
-    {
-      if (getenv(dir_env_var))
-	{
-	  char temp[256]; 
-	  strcpy(temp, getenv(dir_env_var));
-	  strcat(temp, "/");
-	  strcat(temp, filename);
-	  strcpy(filename, temp);
-	  f.clear();                // Clear the previous error.
-	  f.open(filename);
-	  if (f) 
-	    {
-	      *pOutStream << endl << filename << endl;
-	    }
+    ifstream f(filename);
+    if (!f) {
+      if (getenv(dir_env_var)) {
+	char temp[256]; 
+	strcpy(temp, getenv(dir_env_var));
+	strcat(temp, "/");
+	strcat(temp, filename);
+	strcpy(filename, temp);
+	f.clear();                // Clear the previous error.
+	f.open(filename);
+	if (f) {
+	  *pOutStream << endl << filename << endl;
 	}
+      }
     }
 
-  if (f.fail()) 
-    {
+    if (f.fail()) {
       *pOutStream << endl << filename << endl;
       return (E_V_OPEN_FILE);
     }
 
-  vector<byte> ops, *pOldOps;
-  int ecode;
+    vector<byte> ops, *pOldOps;
+    int ecode;
 	
-  istream* pTempIn = pInStream;  // save input stream ptr
-  SetForthInputStream(f);  // set the new input stream
-  long int oldlc = linecount; linecount = 0;
-  pOldOps = pCurrentOps;
-  ecode = ForthCompiler (&ops, &linecount);
-  f.close();
-  pInStream = pTempIn;  // restore the input stream
-  pCurrentOps = pOldOps; 
-  if (ecode) 
-    {
+    istream* pTempIn = pInStream;  // save input stream ptr
+    SetForthInputStream(f);  // set the new input stream
+    long int oldlc = linecount; linecount = 0;
+    pOldOps = pCurrentOps;
+    ecode = ForthCompiler (&ops, &linecount);
+    f.close();
+    pInStream = pTempIn;  // restore the input stream
+    pCurrentOps = pOldOps; 
+    if (ecode) {
       *pOutStream << filename << "  " ;
-      return (ecode);
     }
-  linecount = oldlc;
-
-  // Execute the code immediately
-		      
-  long int *sp;
-  byte *tp;
-  ecode = ForthVM (&ops, &sp, &tp);
-  ops.clear();
-
-  return ecode;
+    else {
+      linecount = oldlc;
+    }
+    return ecode;
 }
 
 // INCLUDE ( "name" -- )
-//
+// Skip leading white space and parse name delimited by a
+// white space character. Push the address and length of
+// name on the stack and perform the function of INCLUDED.
+// Forth 94/2012 11.6.2.1714  File Ext
 int CPP_include()
 {
-    char WordToken[256], s[256];
-    int ecode;
+    int ecode = 0;
+    char filename[256], s[256];
+    C_parsename(); // PARSE-NAME
+    DROP
+    int nc = ((int) TOS) < 256 ? TOS : 255 ;
+    DROP
+    strncpy(filename, (char*) TOS, nc);
+    filename[nc] = 0;
 
-    pTIB = ExtractName (pTIB, WordToken);
     strcpy (s, pTIB);  // save remaining part of input line in TIB
 
-    PUSH_ADDR((long int) ((char*) WordToken))
-    PUSH_IVAL(strlen(WordToken))
+    PUSH_CSTRING( ((char*) filename) )
     ecode = CPP_included();
-    if (ecode) return(ecode);
-
-    strcpy(TIB, s);  // restore TIB with remaining input line
-    pTIB = TIB;      // restore ptr
-    
-    return 0;
+    if (ecode == 0) {
+      strcpy(TIB, s);  // restore TIB with remaining input line
+      pTIB = TIB;      // restore ptr
+    }
+    return ecode;
 }
 
 // SOURCE ( )
-//
-// Forth 2012
+// Return address and number of characters in the input buffer.
+// Forth 2012, 6.1.2216 
 int CPP_source()
 {
-    PUSH_ADDR((long int) TIB)
-    PUSH_IVAL(strlen(TIB))
+    PUSH_CSTRING( TIB )
     return 0;
 }
 
