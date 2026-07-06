@@ -2,7 +2,7 @@
 ;
 ; The assembler portion of kForth 32-bit Virtual Machine
 ;
-; Copyright (c) 1998--2024 Krishna Myneni
+; Copyright (c) 1998--2026 Krishna Myneni
 ;
 ; This software is provided under the terms of the GNU
 ;   Affero General Public License (AGPL) v 3.0 or later.
@@ -498,7 +498,7 @@ FREL_DYADIC MACRO
         STSP
         FCOMP Q[ebx]
         FNSTSW ax
-        and ah, 65
+        and ah, 69
         #1 ah, #2
         mov eax, 0
         #3 al
@@ -3374,7 +3374,7 @@ L_fne:
         NEXT
 
 L_feq:
-        FREL_DYADIC and, 64, setnz
+        FREL_DYADIC xor, 64, setz
         NEXT
 
 L_flt:
@@ -3382,16 +3382,43 @@ L_flt:
         NEXT
 
 L_fgt:
-        FREL_DYADIC and, 1, setnz
+        FREL_DYADIC xor, 1, setz
         NEXT
 
 L_fle:
-        FREL_DYADIC xor, 1, setnz
+        FREL_DYADIC and, 5, setz
         NEXT
 
 L_fge:
-        FREL_DYADIC and, 65, setnz
-        NEXT
+	LDSP
+	mov ecx, WSIZE
+	add ebx, ecx
+	FLD Q[ebx]
+	add ebx, ecx
+	add ebx, ecx
+	FCOMP Q[ebx]
+	FNSTSW ax
+	and ah, 69
+	jz fge_false
+	cmp ah, 69
+	jz fge_false
+	xor eax, eax
+	mov al, 1
+	jmp fge_cont
+fge_false:
+	xor eax, eax
+fge_cont:
+	neg eax
+	add ebx, ecx
+	mov [ebx], eax
+	sub ebx, ecx
+	STSP
+	mov eax, _GlobalTp
+	add eax, 3
+	mov _GlobalTp, eax
+	mov B[eax+1], OP_IVAL
+	xor eax, eax
+	NEXT
 
 L_fzeroeq:
         LDSP
