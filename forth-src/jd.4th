@@ -5,7 +5,6 @@
 \ The following definitions are needed for kForth -- K. Myneni, 9-13-2001
 \ -----------------------------------------
 : third 2 pick ;
-: space 1 spaces ;
 : 3drop 2drop drop ;
 \ -----------------------------------------
 
@@ -20,6 +19,7 @@ The Julian Day is the number of days since 1 January 4713 BC.
 
 : JD                ( dd mm yyyy -- julian-day )
     >R                            ( dd mm)( R: yyyy)
+    dup 1 13 within 0= IF -1 throw THEN  \ error check for month
         3 -  DUP 0< IF  12 +  R> 1- >R  THEN
         306 *  5 +  10 /  +       ( day)
         R@  1461 4 */  +  1721116 +

@@ -130,7 +130,7 @@ t{ PAD strlen -> LC_ALPHABET nip }t
 t{ PAD 32 erase -> }t
 t{ PAD strlen -> 0 }t
 
-TESTING STRCAT STRPCK
+TESTING STRCAT
 N_DIGITS value n1
 N_DIGITS N_LC_ALPHA + value n2
 N_DIGITS N_LC_ALPHA 2* + value Nalpha
@@ -139,6 +139,11 @@ t{ ALPHANUMERIC nip -> Nalpha }t
 t{ ALPHANUMERIC DIGITS search -> ALPHANUMERIC true }t
 t{ ALPHANUMERIC LC_ALPHABET search -> ALPHANUMERIC n1 - swap n1 + swap true }t
 t{ ALPHANUMERIC UC_ALPHABET search -> ALPHANUMERIC n2 - swap n2 + swap true }t
+
+TESTING STRBUFMOVE
+t{ DIGITS 2dup strbufmove nip rot drop = -> true }t  \ copied length is same?
+t{ DIGITS 2dup strbufmove drop nip = -> false }t \ copied address is same?
+t{ DIGITS 2dup strbufmove compare -> 0 }t \ copied string same as original?
 
 TESTING PARSE-TOKEN PARSE-LINE
 s"    3.1415e0  grape      20"  2constant S4
