@@ -1479,6 +1479,7 @@ L_rtunloop:
         xor eax, eax
         NEXT
 L_rtplusloop:
+	push edi
 	push ebp
         mov ebx, _GlobalRtp
         inc ebx
@@ -1488,45 +1489,65 @@ L_rtplusloop:
         mov eax, WSIZE
         LDSP
         add ebx, eax
-        mov ebp, [ebx]          ; get loop increment
+	mov ebp, [ebx]	; ebp = loop increment
         STSP
         INC_DTSP
         mov ebx, _GlobalRp
-        add ebx, eax            ; get ip and save in edx
-        mov edx, [ebx]
         add ebx, eax
-        mov ecx, [ebx]          ; get terminal count in ecx
+	mov edx, [ebx]	; edx = ip to start of loop
         add ebx, eax
-        mov eax, [ebx]          ; get current loop index
-        add eax, ebp            ; new loop index
+	mov ecx, [ebx]	; ecx = terminal count
+	add ebx, eax
+	mov eax, [ebx]
+	mov edi, eax	; edi = current loop index
+	add eax, ebp	; eax = new loop index
         cmp ebp, 0
-        jl plusloop1            ; loop inc < 0?
+	jl plusloop_neg	; loop inc < 0?
+	je plusloop_cont
 	; positive loop increment
-        cmp eax, ecx
-        jl plusloop2           ; is new loop index < ecx?
-	add ecx, ebp
+	cmp ecx, edi
+	ja plusloop0a
+	; TC is below or equal to I
+	cmp eax, edi
+	ja plusloop_cont ; while I+STEP above I
+	; I+STEP has wrapped
 	cmp eax, ecx
-	jge plusloop2          ; is new index >= ecx + inc?
+	jb plusloop_cont ; while I+STEP below TC
+	jmp plusloop_exit
+plusloop0a:
+	; I is below TC
+	cmp eax, edi
+	jb plusloop_exit
+	cmp eax, ecx
+	jb plusloop_cont ; while I+STEP below TC
+plusloop_exit:
 	pop ebp
+	pop edi
 	xor eax, eax
 	UNLOOP
 	NEXT
-plusloop1:                    ; negative loop increment
-	dec ecx
-        cmp eax, ecx
-        jg plusloop2          ; is new loop index > ecx-1?
-	add ecx, ebp
+plusloop_neg:	  ; negative loop increment
+	cmp ecx, edi
+	ja plusloop0b
+	; I is above TC
+	cmp eax, edi
+	ja plusloop_exit
 	cmp eax, ecx
-	jle plusloop2
+	jae plusloop_cont ; while I+STEP above or equal to TC
+	jmp plusloop_exit
+plusloop0b:
+	; TC is above I
+	cmp eax, edi
+	jb plusloop_cont  ; while I+STEP below TC
+	; I+STEP has wrapped
+	cmp eax, ecx
+	jb plusloop_exit  ; terminate if I+STEP below TC
+plusloop_cont:
 	pop ebp
+	pop edi
+	mov [ebx], eax
+	mov ebp, edx
 	xor eax, eax
-	UNLOOP
-	NEXT
-plusloop2:
-	pop ebp
-        mov [ebx], eax	; set loop counter to incremented value
-        mov ebp, edx	 ; set instruction ptr to start of loop
-        xor eax, eax
         NEXT
 
 L_jz:
