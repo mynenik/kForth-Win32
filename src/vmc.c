@@ -50,6 +50,11 @@ extern byte* BottomOfReturnTypeStack;
 #endif
 extern int CPP_bye();
 
+#ifdef _WIN32_
+// Provided by dtoa.c
+extern double strtod(const char *s, char **se);
+#endif
+
 // Provided by vm32.asm
 extern int Base;
 extern int State;

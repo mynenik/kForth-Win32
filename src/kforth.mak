@@ -40,8 +40,7 @@ LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB
 
 CFLAGS		=  -Jm -mn -C -WA -S -3 -a8 -c -w- -w2 -w3 -w6 -g 
 LFLAGS		=  /CO /NOI /DE /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES 
-DEFINES		= -D_WIN32_ -D__NO_FPSTACK__ -D_CONSOLE -D_CONSOLE=1 -DDIR_ENV_VAR=\"KFORTH_DIR\" -DVERSION=\"2.5.4\"
-
+DEFINES		= -D_WIN32_ -D__NO_FPSTACK__ -D_CONSOLE=1 -DDIR_ENV_VAR=\"KFORTH_DIR\" -DVERSION=\"2.5.5\" -DBUILD_DATE=\"2026-07-18\" -DIEEE_8087 -DNO_LONG_LONG
 HFLAGS		= $(CFLAGS) 
 MFLAGS		= MASTERPROJ=$(PROJ) 
 LIBFLAGS	=  /C /P:512 
@@ -56,7 +55,7 @@ PAR		= PROJS BATS OBJS
 RCDEFINES	= 
 INCLUDES	= -ID:\dm\stlport\stlport
 INCLUDEDOBJS	= VM32.OBJ
-OBJS		= ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ kforth.OBJ
+OBJS		= ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ dtoa.OBJ kforth.OBJ
 RCFILES		= kforth.rc
 RESFILES	= kforth.RES
 HELPFILES	= 
@@ -103,7 +102,8 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm32.OBJ
+vm32.OBJ+
+dtoa.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -140,7 +140,8 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm32.OBJ
+vm32.OBJ+
+dtoa.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -162,6 +163,7 @@ clean:
 		-del $(OUTPUTDIR)\SCPH.SYM
 		-del $(OBJS)
 		-del kforth.RES
+		-del kforth.EXE
 
 cleanres:
 		-del $(OUTPUTDIR)\kforth.RES
@@ -176,7 +178,8 @@ kforth.OBJ+
 ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
-vm32.OBJ
+vm32.OBJ+
+dtoa.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -212,5 +215,9 @@ $(OUTPUTDIR)\ForthVM.OBJ:	ForthVM.cpp
 
 $(OUTPUTDIR)\vmc.OBJ:	vmc.c
 		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\vmc.obj vmc.c
+
+$(OUTPUTDIR)\dtoa.OBJ:	dtoa.c
+		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\dtoa.obj dtoa.c
+
 
 
