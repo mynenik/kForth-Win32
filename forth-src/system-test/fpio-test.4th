@@ -1,4 +1,4 @@
-\ fpio-test.fs
+\ fpio-test.4th
 \
 \ Evaluate the floating point input/output number conversion of a 
 \ Forth system which uses IEEE floating point format.

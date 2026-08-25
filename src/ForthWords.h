@@ -2,7 +2,7 @@
 //
 // The intrinsic Forth word list for kForth
 //
-// Copyright (c) 2008--2024 Krishna Myneni,
+// Copyright (c) 2008--2026 Krishna Myneni,
 //   <krishna.myneni@ccreweb.org> 
 //
 // This software is provided under the terms of the GNU
@@ -263,6 +263,7 @@ WordTemplate ForthWords[] =
     { "D.R",       OP_DDOTR,        0 },
     { "UD.",       OP_UDDOT,        0 },
     { "UD.R",      OP_UDDOTR,       0 },
+    { "REPRESENT", OP_REPRESENT,    0 },
     { "F.",        OP_FDOT,         0 },
     { "FS.",       OP_FSDOT,        0 },
     { ".\x22",     OP_DOTQUOTE,     IMMEDIATE },

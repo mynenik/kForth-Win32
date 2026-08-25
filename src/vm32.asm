@@ -22,7 +22,7 @@ public _GlobalSp, _GlobalTp, _GlobalIp, _GlobalRp, _GlobalRtp
 public _BottomOfStack, _BottomOfReturnStack, _BottomOfTypeStack
 public _BottomOfReturnTypeStack, _vmEntryRp, _Base, _State
 public _Precision, _pTIB, _TIB, _WordBuf
-public _NumberCount, _NumberBuf, _JumpTable
+public _NumberCount, _NumberBuf, _fsBuf, _JumpTable
 
 EXTRN _Sleep@4:NEAR
 
@@ -66,6 +66,7 @@ _TIB db 256 dup 0
 _WordBuf db 256 dup 0
 _NumberCount dd 0
 _NumberBuf db 256 dup 0
+_fsBuf db 1024 dup 0
 
 _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_dfloats, L_dfloatplus, _CPP_case, _CPP_endcase ; 4 -- 7
@@ -157,7 +158,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_name_to_interpret, _CPP_name_to_compile, _CPP_defined, _CPP_undefined ; 348 -- 351
           dd L_nop, L_nop, L_nop, _CPP_myname ; 352 -- 355
           dd L_nop, L_nop, L_nop, L_vmthrow   ; 356 -- 359
-          dd L_precision, L_setprecision, L_nop, _CPP_fsdot ; 360 -- 363
+          dd L_precision, L_setprecision, _C_represent, _CPP_fsdot ; 360 -- 363
           dd L_nop, L_nop, _C_fexpm1, _C_flnp1  ; 364 -- 367
           dd _CPP_uddotr, _CPP_ddotr, L_f2drop, L_f2dup  ; 368 -- 371
           dd L_nop, L_nop, L_nop, L_nop  ; 372 -- 375
