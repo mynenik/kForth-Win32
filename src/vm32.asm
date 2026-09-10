@@ -100,7 +100,7 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd _CPP_type, _CPP_udot, _CPP_variable, _CPP_words ; 116 -- 119
           dd _CPP_does, L_2val, L_2fetch, _C_search ; 120 -- 123
           dd L_or, _C_compare, L_not, L_move   ; 124 -- 127
-          dd L_fsin, L_fcos, _C_ftan, _C_fasin ; 128 -- 131
+          dd _C_fsin, _C_fcos, _C_ftan, _C_fasin ; 128 -- 131
           dd _C_facos, _C_fatan, _C_fexp, _C_fln   ; 132 -- 135
           dd _C_flog, L_fatan2, L_ftrunc, L_ftrunctos   ; 136 -- 139
           dd _C_fmin, _C_fmax, L_floor, L_fround ; 140 -- 143
@@ -3646,6 +3646,7 @@ L_fsquare:
         FSTP Q[ebx + WSIZE]
         NEXT
 
+; L_fcos is deprecated; it is replaced by _C_fcos in JumpTable
 L_fcos:
         LDSP
         FLD Q[ebx + WSIZE]
@@ -3653,6 +3654,7 @@ L_fcos:
         FSTP Q[ebx + WSIZE]
         NEXT
 
+; L_fsin is deprecated; it is replaced by _C_fsin in JumpTable
 L_fsin:
         LDSP
         FLD Q[ebx + WSIZE]

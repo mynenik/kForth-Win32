@@ -24,7 +24,13 @@ HEADERS		= fbc.h \
 		  kfmacros.h \
 		  ForthWords.h \
 		  ForthCompiler.h \
-		  ForthVM.h
+		  ForthVM.h \
+		  VMerrors.h \
+		  branred.h \
+		  dla.h \
+		  endian.h \
+		  mydefs.h \
+		  usncs.h
 
 DEFFILE		= kforth.DEF
 DEF_DIR_VAR     = ""
@@ -40,7 +46,7 @@ LIBS		= advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB
 
 CFLAGS		=  -Jm -mn -C -WA -S -3 -a8 -c -w- -w2 -w3 -w6 -g 
 LFLAGS		=  /CO /NOI /DE /PACKF /XN /NT /ENTRY:mainCRTStartup /VERS:1.0 /BAS:4194304 /A:512 /RC   :kforth.RES 
-DEFINES		= -D_WIN32_ -D__NO_FPSTACK__ -D_CONSOLE=1 -DDIR_ENV_VAR=\"KFORTH_DIR\" -DVERSION=\"2.6.0\" -DBUILD_DATE=\"2026-08-24\" -DIEEE_8087 -DNO_LONG_LONG
+DEFINES		= -D_WIN32_ -D__NO_FPSTACK__ -D_CONSOLE=1 -DDIR_ENV_VAR=\"KFORTH_DIR\" -DVERSION=\"2.6.9\" -DBUILD_DATE=\"2026-09-10\" -DIEEE_8087 -DNO_LONG_LONG
 HFLAGS		= $(CFLAGS) 
 MFLAGS		= MASTERPROJ=$(PROJ) 
 LIBFLAGS	=  /C /P:512 
@@ -55,7 +61,14 @@ PAR		= PROJS BATS OBJS
 RCDEFINES	= 
 INCLUDES	= -ID:\dm\stlport\stlport
 INCLUDEDOBJS	= VM32.OBJ
-OBJS		= ForthCompiler.OBJ ForthVM.OBJ vmc.OBJ dtoa.OBJ kforth.OBJ
+OBJS		= ForthCompiler.OBJ \
+		  ForthVM.OBJ \
+		  vmc.OBJ \
+		  dtoa.OBJ \
+		  branred.OBJ \
+		  sincostab.OBJ \
+		  s_sin.OBJ \
+		  kforth.OBJ
 RCFILES		= kforth.rc
 RESFILES	= kforth.RES
 HELPFILES	= 
@@ -103,7 +116,10 @@ ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
 vm32.OBJ+
-dtoa.OBJ
+dtoa.OBJ+
+branred.OBJ+
+sincostab.OBJ+
+s_sin.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -141,7 +157,10 @@ ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
 vm32.OBJ+
-dtoa.OBJ
+dtoa.OBJ+
+branred.OBJ+
+sincostab.OBJ+
+s_sin.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -179,7 +198,10 @@ ForthCompiler.OBJ+
 ForthVM.OBJ+
 vmc.OBJ+
 vm32.OBJ+
-dtoa.OBJ
+dtoa.OBJ+
+branred.OBJ+
+sincostab.OBJ+
+s_sin.OBJ
 $$SCW$$.EXE
 NUL
 advapi32.lib KERNEL32.LIB GDI32.LIB USER32.LIB 
@@ -189,35 +211,31 @@ kforth.DEF;
 		-del $(TARGETDIR)\$(PROJ).$(PROJTYPE)
 		-ren $(TARGETDIR)\$$SCW$$.$(PROJTYPE) $(PROJ).$(PROJTYPE)
 
-
-
-
 !IF EXIST (kforth.dpd)
 !INCLUDE kforth.dpd
 !ENDIF
 
-
-
-$(OUTPUTDIR)\kforth.OBJ:	kforth.cpp
-		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\kforth.obj kforth.cpp
-
-
+$(OUTPUTDIR)\kforth.OBJ: kforth.cpp
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\kforth.obj kforth.cpp
 
 $(OUTPUTDIR)\ForthCompiler.OBJ:	ForthCompiler.cpp
-		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\ForthCompiler.obj ForthCompiler.cpp
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\ForthCompiler.obj ForthCompiler.cpp
 
+$(OUTPUTDIR)\ForthVM.OBJ: ForthVM.cpp
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\ForthVM.obj ForthVM.cpp
 
+$(OUTPUTDIR)\vmc.OBJ: vmc.c
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\vmc.obj vmc.c
 
-$(OUTPUTDIR)\ForthVM.OBJ:	ForthVM.cpp
-		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\ForthVM.obj ForthVM.cpp
+$(OUTPUTDIR)\dtoa.OBJ: dtoa.c
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\dtoa.obj dtoa.c
 
+$(OUTPUTDIR)\branred.OBJ: branred.c
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\branred.obj branred.c
 
+$(OUTPUTDIR)\sincostab.OBJ: sincostab.c
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\sincostab.obj sincostab.c
 
-$(OUTPUTDIR)\vmc.OBJ:	vmc.c
-		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\vmc.obj vmc.c
-
-$(OUTPUTDIR)\dtoa.OBJ:	dtoa.c
-		$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\dtoa.obj dtoa.c
-
-
+$(OUTPUTDIR)\s_sin.OBJ: s_sin.c
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o$(OUTPUTDIR)\s_sin.obj s_sin.c
 

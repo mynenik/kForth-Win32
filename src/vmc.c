@@ -7,7 +7,7 @@ vmc.c
   <krishna.myneni@ccreweb.org>
 
   This software is provided under the terms of the GNU
-  Affero General Public License (AGPL), v 3.0 or later.
+  General Public License (GPL), v 3.0 or later.
 
 */
 
@@ -54,6 +54,7 @@ extern int CPP_bye();
 // Provided by dtoa.c
 extern double strtod(const char *s, char **se);
 extern char* dtoa(double, int, int, int*, int*, char**);
+// Provided by s_sincos.c: C_fsin(), C_fcos()
 #endif
 
 // Provided by vm32.asm
