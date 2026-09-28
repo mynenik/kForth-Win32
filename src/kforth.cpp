@@ -6,7 +6,7 @@
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU 
-// Affero General Public License (AGPL), v 3.0 or later.
+// General Public License (AGPL), v 3.0 or later.
 //
 // Contributions by (source code, bug fixes, documentation, 
 // packaging, misc):
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	cout << "kForth-Win32 v " << version << "\t (Build: " << build << ")" << endl;
 	cout << "Copyright (c) 1998--2026 Krishna Myneni" << endl;
         cout << "Contributions by: dpw gd mu bk abs tn cmb bg dnw" << endl;
-	cout << "Provided under the GNU Affero General Public License, v3.0 or later."
+	cout << "Provided under the GNU General Public License, v3.0 or later."
 		<< endl << endl;
       }
     else {

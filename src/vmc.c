@@ -42,6 +42,11 @@ extern byte* GlobalIp;
 extern int* GlobalRp;
 extern int* BottomOfStack;
 extern int* BottomOfReturnStack;
+#ifndef __NO_FPSTACK__
+extern void* GlobalFp;
+extern void* BottomOfFpStack;
+extern long int FpSize;
+#endif
 #ifndef __FAST__
 extern byte* GlobalTp;
 extern byte* GlobalRtp;
@@ -50,10 +55,12 @@ extern byte* BottomOfReturnTypeStack;
 #endif
 extern int CPP_bye();
 
+// Provided by dtoa.c
+extern char* dtoa(double, int, int, int*, int*, char**);
+
 #ifdef _WIN32_
 // Provided by dtoa.c
 extern double strtod(const char *s, char **se);
-extern char* dtoa(double, int, int, int*, int*, char**);
 // Provided by s_sincos.c: C_fsin(), C_fcos()
 #endif
 
@@ -1011,21 +1018,28 @@ int C_represent ()
   char *rv;   // return string ptr
   char *rve;  // return string end ptr
   char *p_rv, *p_s;
-  long int i, mode, decpt, sign, rv_len, tr_zeros, b2;
+  long int i, mode, dec_exp, sign, rv_len, tr_zeros, b2;
   double d;
   DROP
   udig = (unsigned long int) TOS; // u
   DROP
   CHK_ADDR
   s = (char *) TOS; // c-addr
+#ifndef __NO_FPSTACK__
+  INC_FSP
+  if (GlobalFp > BottomOfFpStack)
+    return E_V_FP_STK_UNDERFLOW;
+  d = *((double*) GlobalFp);
+#else
   DROP
   d = *((double*) GlobalSp);  // r
   DROP
+#endif
   mode = 2;  // dtoa() mode 2
   p_s = s;
-  rv = dtoa(d, mode, udig, &decpt, &sign, &rve);
+  rv = dtoa(d, mode, udig, &dec_exp, &sign, &rve);
   if (sign) sign = TRUE;
-  if ((rv == NULL) || (decpt == 9999)) {
+  if ((rv == NULL) || (dec_exp == 9999)) {
     b2 = FALSE;  // conversion failed
   }
   else {
@@ -1040,7 +1054,7 @@ int C_represent ()
     b2 = TRUE;   // conversion succeeded
   }
   *p_s = '\0';
-  PUSH_IVAL( decpt )   // n
+  PUSH_IVAL( dec_exp )   // n
   PUSH_IVAL( sign )  
   PUSH_IVAL( b2 )
   return 0;
