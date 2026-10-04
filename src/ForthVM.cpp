@@ -7,7 +7,7 @@
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU
-// Affero General Public License, (AGPL), v3.0 or later.
+// General Public License, (GPL), v3.0 or later.
 
 const char* dir_env_var=DIR_ENV_VAR;
 
@@ -1632,13 +1632,11 @@ int CPP_fsdot ()
   }
 #endif
   char *sig;  // buffer for significand
-  int  sig_len;
   unsigned long int d_lo, d_hi;
   long int b2, sign, dec_exp;
   d_lo = *((unsigned long int *) &d);
   d_hi = *(((unsigned long int *) &d) + 1);
-  sig_len = Precision + 1;
-  sig = new char[sig_len];  // allocate buffer for significand
+  sig = new char[Precision];  // allocate buffer for significand
   PUSH_ADDR( ((long int) sig) )
   PUSH_IVAL( Precision )
 
@@ -1650,8 +1648,6 @@ int CPP_fsdot ()
   sign = TOS;
   DROP
   dec_exp = TOS;
-
-  sig_len = strlen(sig);
 
   char *p_fs = fsBuf;
   char *p_sig = sig;
@@ -1675,11 +1671,11 @@ int CPP_fsdot ()
   } 
   else {
 // *pOutStream << "significand = " << sig << " decpt = " << decpt << " sign = " << sign << endl;     
-    char s_exp[5];  // buffer for ascii decimal exponent
+    char s_exp[8];  // buffer for ascii decimal exponent
     long int s_exp_len, dec_fs_exp, dec_places;
     if (sign) *p_fs++ = '-';
     *p_fs++ = *p_sig++; *p_fs++ = '.';
-    dec_places = sig_len - 1;  // #digits after decimal point
+    dec_places = Precision - 1;  // #digits after decimal point
     strncpy(p_fs, p_sig, dec_places);
     p_fs += dec_places;
     *p_fs++ = 'e';

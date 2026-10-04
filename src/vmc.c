@@ -1023,6 +1023,7 @@ int C_represent ()
   DROP
   udig = (unsigned long int) TOS; // u
   DROP
+  if ((udig == 0) || (udig > 768)) return E_V_INVALID_ARG;
   CHK_ADDR
   s = (char *) TOS; // c-addr
 #ifndef __NO_FPSTACK__
@@ -1053,7 +1054,6 @@ int C_represent ()
     }
     b2 = TRUE;   // conversion succeeded
   }
-  *p_s = '\0';
   PUSH_IVAL( dec_exp )   // n
   PUSH_IVAL( sign )  
   PUSH_IVAL( b2 )

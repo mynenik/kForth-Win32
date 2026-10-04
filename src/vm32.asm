@@ -5,7 +5,7 @@
 ; Copyright (c) 1998--2026 Krishna Myneni
 ;
 ; This software is provided under the terms of the GNU
-;   Affero General Public License (AGPL) v 3.0 or later.
+;   General Public License (GPL) v 3.0 or later.
 ;
 ; Usage from C++
 ;
@@ -39,6 +39,7 @@ MAX_SHIFT_COUNT equ WSIZE*8-1
 
 E_DIV_ZERO      equ     -10
 E_ARG_TYPE_MISMATCH equ -12
+E_INVALID_ARG   equ     -24
 E_QUIT          equ     -56
 E_NOT_ADDR      equ     -256
 E_RET_STK_CORRUPT equ   -258
@@ -767,6 +768,14 @@ E_div_overflow:
         mov eax, E_DIV_OVERFLOW
         ret
 
+E_arg_type_mismatch:
+        mov eax, E_ARG_TYPE_MISMATCH
+        ret
+
+E_invalid_arg:
+        mov eax, E_INVALID_ARG
+        ret
+
 L_vmthrow:  ; throw VM error (used as default exception handler)
         LDSP
         INC_DSP
@@ -878,6 +887,10 @@ L_setprecision:
         LDSP
         _DROP
         mov ecx, [ebx]
+        cmp ecx, 0
+        jz E_invalid_arg
+        cmp ecx, 768
+        ja E_invalid_arg
         mov _Precision, ecx
         NEXT
 

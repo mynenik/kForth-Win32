@@ -6,7 +6,7 @@
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU 
-// General Public License (AGPL), v 3.0 or later.
+// General Public License (GPL), v 3.0 or later.
 //
 // Contributions by (source code, bug fixes, documentation, 
 // packaging, misc):
