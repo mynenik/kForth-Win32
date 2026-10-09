@@ -1,10 +1,10 @@
 // ForthVM.h
 //
-// Copyright (c) 1996--2022, Krishna Myneni
+// Copyright (c) 1996--2026, Krishna Myneni
 //   <krishna.myneni@ccreweb.org>
 //
 // This software is provided under the terms of the GNU
-// Affero General Public License (AGPL), v3.0 or later.
+// General Public License (GPL), v3.0 or later.
 //
 #ifndef __FORTHVM_H__
 #define __FORTHVM_H__
@@ -77,6 +77,7 @@ int CPP_udot();
 int CPP_udotr();
 int CPP_ddot();
 int CPP_fdot();
+int CPP_fsdot_str();
 int CPP_fsdot();
 int CPP_dots();
 #ifndef __NO_FPSTACK__

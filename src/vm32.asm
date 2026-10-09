@@ -183,6 +183,9 @@ _JumpTable dd L_false, L_true, L_cells, L_cellplus ; 0 -- 3
           dd L_nop, L_nop, L_nop, L_nop  ; 444 -- 447
           dd L_nop, L_nop, _C_valloc, _C_vfree  ; 448 -- 451
           dd _C_vprotect, L_nop, L_nop, L_nop   ; 452 -- 455
+          dd L_nop, L_nop, L_nop, L_nop                 ; 456--459
+          dd L_nop, _CPP_fsdot_str, L_nop, L_nop        ; 460--463
+
 _DATA ENDS
 
 public _JumpTable

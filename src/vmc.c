@@ -53,6 +53,14 @@ extern byte* GlobalRtp;
 extern byte* BottomOfTypeStack;
 extern byte* BottomOfReturnTypeStack;
 #endif
+extern int Base;
+extern int State;
+extern char* pTIB;
+extern int NumberCount;
+extern int JumpTable[];
+extern char WordBuf[];
+extern char TIB[];
+extern char NumberBuf[];
 extern int CPP_bye();
 
 // Provided by dtoa.c
@@ -63,16 +71,6 @@ extern char* dtoa(double, int, int, int*, int*, char**);
 extern double strtod(const char *s, char **se);
 // Provided by s_sincos.c: C_fsin(), C_fcos()
 #endif
-
-// Provided by vm32.asm
-extern int Base;
-extern int State;
-extern char* pTIB;
-extern int NumberCount;
-extern int JumpTable[];
-extern char WordBuf[];
-extern char TIB[];
-extern char NumberBuf[];
 
 // Provided by vm32.asm
 extern int L_dnegate();
@@ -1018,7 +1016,7 @@ int C_represent ()
   char *rv;   // return string ptr
   char *rve;  // return string end ptr
   char *p_rv, *p_s;
-  long int i, mode, dec_exp, sign, rv_len, tr_zeros, b2;
+  int i, mode, dec_exp, sign, rv_len, tr_zeros, b2;
   double d;
   DROP
   udig = (unsigned long int) TOS; // u
@@ -1036,12 +1034,26 @@ int C_represent ()
   d = *((double*) GlobalSp);  // r
   DROP
 #endif
+  unsigned int d_lo = *((unsigned int *) &d);
+  unsigned int d_hi = *(((unsigned int *) &d) + 1);
   mode = 2;  // dtoa() mode 2
   p_s = s;
   rv = dtoa(d, mode, udig, &dec_exp, &sign, &rve);
   if (sign) sign = TRUE;
   if ((rv == NULL) || (dec_exp == 9999)) {
-    b2 = FALSE;  // conversion failed
+    if (dec_exp == 9999) {
+      // NAN or INF ?
+      int exp2b = ((d_hi >> 0x14) & 0x7ff);
+      if ( (exp2b == 0x7ff) && (d_lo == 0) && ((d_hi & 0xfffff) == 0) )
+        strncpy(p_s, "inf", 3);
+      else
+        strncpy(p_s, "nan", 3);
+    }
+    else {
+      strncpy(p_s, "ERR", 3);
+    }
+    p_s += 3;
+    b2 = FALSE;  // conversion failed: indicates INF, NAN, or ERR
   }
   else {
     rv_len = strlen(rv);
